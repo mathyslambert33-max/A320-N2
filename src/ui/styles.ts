@@ -115,23 +115,26 @@ export const CSS = String.raw`
 
 /* ------------------------------------------------------------------ start screen */
 .a3-start { background: linear-gradient(90deg, rgba(4,7,10,.96) 0%, rgba(4,7,10,.9) 36%, rgba(4,7,10,.35) 70%, rgba(4,7,10,.15) 100%); overflow: auto; }
-.a3-start .col { width: min(640px, 100%); padding: 44px 48px 36px; display: flex; flex-direction: column; gap: 22px; }
-.a3-start .sub { font-size: 14px; color: var(--a3-dim); margin-top: 8px; }
-.a3-route { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 18px 20px;
-  border: 1px solid var(--a3-line); border-radius: 10px; background: rgba(255,255,255,.025); }
+.a3-start .col { width: min(640px, 100%); padding: 30px 44px 24px; display: flex; flex-direction: column; gap: 16px; height: max-content; min-height: 100%; }
+.a3-start .col > * { flex-shrink: 0; }
+.a3-start .a3-h1 { font-size: 46px; margin-top: 8px; }
+.a3-start .sub { font-size: 13.5px; color: var(--a3-dim); margin-top: 6px; }
+.a3-brief { border: 1px solid var(--a3-line); border-radius: 10px; background: rgba(255,255,255,.025); overflow: hidden; }
+.a3-route { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 14px 18px; }
 .a3-route .ap b { display: block; font: 600 34px/1 var(--a3-f-head); letter-spacing: .05em; color: #fff; }
 .a3-route .ap span { font-size: 12px; color: var(--a3-dim); }
 .a3-route .ap.r { text-align: right; }
 .a3-route .mid { position: relative; height: 22px; display: flex; align-items: center; justify-content: center; color: var(--a3-cyan); }
 .a3-route .mid::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed rgba(79,209,255,.45); }
 .a3-route .mid .a3-ico { position: relative; width: 22px; height: 22px; transform: rotate(90deg); background: #0c1117; padding: 1px; fill: rgba(79,209,255,.2); }
-.a3-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--a3-line); border: 1px solid var(--a3-line); border-radius: 8px; overflow: hidden; }
-.a3-stats div { background: #0b1016; padding: 10px 12px; }
+.a3-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--a3-line); border-top: 1px solid var(--a3-line); }
+.a3-stats div { background: #0b1016; padding: 9px 12px; }
 .a3-stats small { display: block; font: 600 10.5px/1 var(--a3-f-head); letter-spacing: .14em; text-transform: uppercase; color: var(--a3-faint); }
 .a3-stats b { display: block; margin-top: 6px; font: 400 15px/1 var(--a3-f-mono); color: #fff; }
 .a3-mission { border-left: 2px solid var(--a3-cyan); padding: 2px 0 2px 14px; }
-.a3-metar { font: 12px/1.45 var(--a3-f-mono); color: #b9c7d3; background: rgba(255,255,255,.03); border: 1px solid var(--a3-line); border-radius: 6px; padding: 8px 10px; }
-.a3-opts { display: grid; grid-template-columns: 150px 1fr; gap: 12px 16px; align-items: center; }
+.a3-mission .a3-p { font-size: 13px; line-height: 1.5; }
+.a3-metar { font: 11.5px/1.4 var(--a3-f-mono); color: #9fb0bf; background: #080c11; border-top: 1px solid var(--a3-line); padding: 7px 18px; }
+.a3-opts { display: grid; grid-template-columns: 150px 1fr; gap: 9px 16px; align-items: center; }
 .a3-opts > label { font: 600 12px/1.2 var(--a3-f-head); letter-spacing: .1em; text-transform: uppercase; color: var(--a3-dim); }
 .a3-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .a3-foot { font-size: 11.5px; color: var(--a3-faint); display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
@@ -167,17 +170,18 @@ export const CSS = String.raw`
 
 /* ------------------------------------------------------------------ end screen */
 .a3-end { background: linear-gradient(180deg, rgba(3,6,9,.7), rgba(3,6,9,.94)); overflow: auto; }
-.a3-end .wrap { margin: auto; width: min(880px, 94vw); padding: 36px 0; display: flex; flex-direction: column; gap: 20px; }
-.a3-end .big { font: 600 50px/1 var(--a3-f-head); letter-spacing: .04em; color: #fff; }
+.a3-end .wrap { margin: auto; width: min(900px, 94vw); padding: 26px 0; display: flex; flex-direction: column; gap: 16px; }
+.a3-end .wrap > * { flex-shrink: 0; }
+.a3-end .big { font: 600 44px/1 var(--a3-f-head); letter-spacing: .04em; color: #fff; }
 .a3-end .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.a3-end .kpi { padding: 14px 16px; border-radius: 10px; background: rgba(255,255,255,.035); border: 1px solid var(--a3-line); }
+.a3-end .kpi { padding: 12px 16px; border-radius: 10px; background: rgba(255,255,255,.035); border: 1px solid var(--a3-line); }
 .a3-end .kpi small { font: 600 11px/1 var(--a3-f-head); letter-spacing: .14em; text-transform: uppercase; color: var(--a3-faint); }
 .a3-end .kpi b { display: block; margin-top: 8px; font: 600 28px/1 var(--a3-f-head); color: #fff; letter-spacing: .03em; }
 .a3-end .kpi b.g { color: var(--a3-green); } .a3-end .kpi b.a { color: var(--a3-amber); }
 .a3-deb { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .a3-deb section { padding: 14px 14px 8px; border-radius: 10px; background: rgba(255,255,255,.025); border: 1px solid var(--a3-line); }
 .a3-deb ul { list-style: none; margin: 0; padding: 0; }
-.a3-deb li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid var(--a3-line); font-size: 12.5px; line-height: 1.35; color: #d8e1e8; }
+.a3-deb li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; padding: 6px 0; border-top: 1px solid var(--a3-line); font-size: 12.5px; line-height: 1.35; color: #d8e1e8; }
 .a3-deb li:first-child { border-top: 0; }
 .a3-deb li i { font-style: normal; font-weight: 700; }
 .a3-deb li.ok i { color: var(--a3-green); } .a3-deb li.ko i { color: var(--a3-amber); }
@@ -187,8 +191,8 @@ export const CSS = String.raw`
 .a3-efbwrap { background: rgba(2,4,6,.55); align-items: center; justify-content: center; }
 .a3-tablet { position: relative; width: min(1220px, 95vw); height: min(860px, 92vh); border-radius: 36px; padding: 18px;
   background: linear-gradient(145deg, #2a2e33, #15181b 40%, #0e1012); box-shadow: 0 30px 80px rgba(0,0,0,.65), inset 0 0 0 1.5px #3a3f45, inset 0 0 0 7px #0b0c0e;
-  animation: a3-pop .22s ease-out both; }
-@keyframes a3-pop { from { opacity: 0; transform: scale(.96) translateY(12px); } to { opacity: 1; transform: none; } }
+  animation: a3-pop .2s ease-out; }
+@keyframes a3-pop { from { opacity: .5; transform: scale(.97) translateY(10px); } to { opacity: 1; transform: none; } }
 .a3-tablet::before { content: ""; position: absolute; left: 50%; top: 7px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; background: #1d2126; box-shadow: inset 0 0 2px #000; }
 .a3-efb { --e-bg: #eef1f4; --e-bg2: #ffffff; --e-rail: #1b2430; --e-text: #16202b; --e-dim: #5b6776; --e-line: #d3dae2; --e-acc: #0a72c2; --e-acc-bg: #e3f0fb;
   --e-ok: #108a4a; --e-warn: #b86b00; --e-bad: #c0392b; --e-mono-bg: #fbfcfd;
@@ -208,6 +212,7 @@ export const CSS = String.raw`
 .a3-efb .hbar button { appearance: none; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; border-radius: 8px; height: 34px;
   padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font: 600 12px/1 var(--a3-f-head); letter-spacing: .08em; text-transform: uppercase; }
 .a3-efb .hbar button:hover { background: rgba(255,255,255,.14); }
+.a3-efb .hbar button .k { font: 700 10px/1 var(--a3-f-mono); padding: 2px 4px; border: 1px solid rgba(255,255,255,.3); border-radius: 3px; opacity: .8; margin-left: 2px; }
 .a3-efb .rail { background: var(--e-rail); display: flex; flex-direction: column; padding: 8px 8px 12px; gap: 3px; overflow: auto; }
 .a3-efb .rail button { appearance: none; border: 0; background: transparent; color: #aebccb; border-radius: 9px; padding: 10px 10px; display: flex; align-items: center; gap: 10px;
   font: 600 12.5px/1.1 var(--a3-f-head); letter-spacing: .07em; text-transform: uppercase; cursor: pointer; text-align: left; position: relative; }

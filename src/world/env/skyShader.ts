@@ -16,7 +16,7 @@ export const SKY_UNIFORMS = () => ({
   turbidity: { value: 3 },
   mieCoefficient: { value: 0.005 },
   mieDirectionalG: { value: 0.8 },
-  skyExposure: { value: 0.022 },
+  skyExposure: { value: 0.0066 },
   showSunDisc: { value: 1 },
   /** night sky: zenith colour, horizon colour (linear radiance) */
   nightZenith: { value: new THREE.Color(0.0016, 0.0022, 0.0042) },
@@ -198,6 +198,9 @@ void main() {
   Lin *= mix( vec3( 1.0 ), pow( vSunE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 1.0 / 2.0 ) ), clamp( pow( 1.0 - sd.y, 5.0 ), 0.0, 1.0 ) );
   vec3 L0 = vec3( 0.1 ) * Fex;
   vec3 day = ( Lin + L0 ) * skyExposure;
+  // soft knee: Preetham over-brightens the horizon (5-10x the zenith, real skies 2-4x)
+  float Ld = dot( day, vec3( 0.2126, 0.7152, 0.0722 ) );
+  if ( Ld > 0.45 ) day *= ( 0.45 + ( Ld - 0.45 ) / ( 1.0 + ( Ld - 0.45 ) * 1.6 ) ) / Ld;
 
   // --- night sky ---
   float h = max( direction.y, 0.0 );
@@ -210,8 +213,8 @@ void main() {
   vec3 col = day * ( 1.0 - nightFactor * 0.85 ) + night * nightFactor;
 
   // --- clouds ---
-  vec3 sunLight = sunColor * skyExposure * 26.0 * smoothstep( -0.10, 0.08, sd.y );
-  vec3 ambient = day * 1.4 + night * 1.8 + vec3( 0.55, 0.62, 0.78 ) * moonIllum * 0.004 * nightFactor;
+  vec3 sunLight = sunColor * 0.62 * smoothstep( -0.10, 0.08, sd.y );
+  vec3 ambient = day * 1.2 + night * 1.8 + vec3( 0.55, 0.62, 0.78 ) * moonIllum * 0.004 * nightFactor;
   vec4 c0 = cloudLayer( direction, cloud0, col, sunLight, ambient );
   vec4 c1 = cloudLayer( direction, cloud1, col, sunLight, ambient );
   // higher layer first, lower layer in front
@@ -221,7 +224,7 @@ void main() {
 
   // --- sun disc ---
   float sundisc = smoothstep( sunAngularDiameterCos, sunAngularDiameterCos + 0.00002, cosTheta ) * showSunDisc * ( 1.0 - envPass );
-  col += sundisc * sunColor * 60.0 * ( 1.0 - cloudOcc );
+  col += sundisc * sunColor * 40.0 * ( 1.0 - cloudOcc );
 
   // below the horizon: haze colour (only seen in the environment map / at the far edge of the ground)
   if ( direction.y < 0.0 ) {
@@ -273,6 +276,11 @@ export function skyRadianceJS(dir: THREE.Vector3, p: SkyParams, out = new THREE.
     let Lin = Math.pow(vSunE * ratio * (1 - Fex), 1.5);
     Lin *= 1 + (Math.pow(vSunE * ratio * Fex, 0.5) - 1) * mixK;
     res[i] = (Lin + 0.1 * Fex) * p.skyExposure;
+  }
+  const Ld = 0.2126 * res[0] + 0.7152 * res[1] + 0.0722 * res[2];
+  if (Ld > 0.45) {
+    const k = (0.45 + (Ld - 0.45) / (1 + (Ld - 0.45) * 1.6)) / Ld;
+    res[0] *= k; res[1] *= k; res[2] *= k;
   }
   return out.setRGB(res[0], res[1], res[2]);
 }

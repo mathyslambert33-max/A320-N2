@@ -229,7 +229,7 @@ function buildTiller(app: App, side: Side): { obj: THREE.Object3D; update(dt: nu
   wb.at(new THREE.SphereGeometry(0.0115, 16, 10), M.gripBlack, 0.042, 0.048, 0);
   // white index line on the hub
   wb.at(geo.box(0.022, 0.001, 0.003), M.white, 0.012, 0.0125, 0);
-  const wm = wb.build(`TILLER_${side}:wheel`);
+  const wm = wb.build(`TILLER_${side}:wheel`, { dynamic: true });
   wheel.add(wm);
   const id = `TILLER_${side}`;
   const V = `C:${id}`;

@@ -108,7 +108,6 @@ const FRAG_LIGHTS = /* glsl */ `
   IncidentLight wl;
   wl.visible = true;
   if ( wlLightsOn.x > 0.5 ) {
-    #pragma unroll_loop_start
     for ( int i = 0; i < ${N_FLOOD}; i ++ ) {
       if ( wlFloodCol[ i ].r + wlFloodCol[ i ].g + wlFloodCol[ i ].b > 0.0 ) {
         vec3 L = wlFloodPos[ i ].xyz - vWlPos;
@@ -124,10 +123,8 @@ const FRAG_LIGHTS = /* glsl */ `
         RE_Direct( wl, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
       }
     }
-    #pragma unroll_loop_end
   }
   if ( wlLightsOn.y > 0.5 ) {
-    #pragma unroll_loop_start
     for ( int i = 0; i < ${N_ACL}; i ++ ) {
       if ( wlAclCol[ i ].r + wlAclCol[ i ].g + wlAclCol[ i ].b > 0.0 ) {
         vec3 L = wlAclPos[ i ].xyz - vWlPos;
@@ -146,7 +143,6 @@ const FRAG_LIGHTS = /* glsl */ `
         RE_Direct( wl, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
       }
     }
-    #pragma unroll_loop_end
   }
 }
 `;
@@ -162,8 +158,14 @@ export interface PatchOptions {
   key?: string;
 }
 
+/** Debug switches (harness &wno=patch,lights,wshadows). */
+export const WL_DEBUG = { noPatch: false, noLights: false, noShadows: false };
+
 /** Patch a MeshStandardMaterial / MeshPhysicalMaterial (or a subclass) in place. */
 export function patchWorldMaterial<T extends THREE.Material>(mat: T, opts: PatchOptions = {}): T {
+  if (WL_DEBUG.noPatch) return mat;
+  if (WL_DEBUG.noLights) opts = { ...opts, lights: false };
+  if (WL_DEBUG.noShadows) opts = { ...opts, shadows: false };
   const shadows = opts.shadows !== false;
   const lights = opts.lights !== false;
   const prev = mat.onBeforeCompile;

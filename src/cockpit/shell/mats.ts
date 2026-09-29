@@ -175,7 +175,7 @@ export function shellMats(): ShellMats {
     webbing: std({ color: 0x2e3440, roughness: 0.85, metalness: 0, normalMap: fabricN, normalScale: new THREE.Vector2(0.8, 0.8) }, 'webbing'),
     seatMetal: std({ color: 0x2c3035, roughness: 0.45, metalness: 0.55 }, 'seatMetal'),
     rubberBoot: std({ color: 0x151618, roughness: 0.75, metalness: 0 }, 'rubberBoot'),
-    gripBlack: std({ color: 0x141517, roughness: 0.6, metalness: 0, normalMap: pebble, normalScale: new THREE.Vector2(0.4, 0.4) }, 'gripBlack'),
+    gripBlack: std({ color: 0x151618, roughness: 0.5, metalness: 0, normalMap: pebble, normalScale: new THREE.Vector2(0.06, 0.06) }, 'gripBlack'),
     red: std({ color: 0xb3130f, roughness: 0.35, metalness: 0 }, 'red'),
     yellow: std({ color: 0xf0c020, roughness: 0.5, metalness: 0 }, 'yellow'),
     orange: std({ color: 0xd9601a, roughness: 0.7, metalness: 0 }, 'orange'),

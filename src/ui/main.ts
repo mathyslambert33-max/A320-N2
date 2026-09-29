@@ -58,7 +58,8 @@ export function installUi(app: App, ground: GroundService, game: GameService): v
 
   /* ------------------------------------------------------------------ state */
   let mode: Mode = 'title';
-  let wantLock = uiPrefs().pointerLock && q.get('ui.free') !== '1';
+  // The dev harness starts in free-cursor mode (screenshots, no pointer lock without a click) unless ui.free=0.
+  let wantLock = uiPrefs().pointerLock && q.get('ui.free') !== '1' && !(app.isHarness && q.get('ui.free') !== '0');
   let lockBroken = false;
   let expectUnlock = false;
   let lastUnlockT = -10;
@@ -254,6 +255,8 @@ export function installUi(app: App, ground: GroundService, game: GameService): v
   function showEnd(r: GameResult): void {
     if (mode === 'efb') efb.close();
     closeSub();
+    titleEl?.remove();
+    titleEl = null;
     pause.el.remove();
     mode = 'end';
     exitLock();

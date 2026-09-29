@@ -94,7 +94,7 @@ export class Efb {
         h('div', 'flt', `${f.number} · ${f.from} → ${f.to} · ${SCENARIO.aircraft.type} ${SCENARIO.aircraft.registration}`),
         h('div', 'sp'),
         this.themeBtn,
-        h('button', { attrs: { type: 'button' }, on: { click: () => ctx.onClose() } }, icon(ICONS.close), 'Fermer'),
+        h('button', { attrs: { type: 'button', title: 'Tab ou Échap' }, on: { click: () => ctx.onClose() } }, icon(ICONS.close), 'Fermer', h('span', 'k', 'Tab')),
       ),
       rail,
       this.main,
@@ -164,7 +164,6 @@ export class Efb {
       case 'ground': this.main.replaceChildren(...this.groundTab()); this.unread = 0; this.updateBadge(); break;
       case 'settings': this.main.replaceChildren(h('h2', null, 'Réglages'), h('p', 'lead', 'Réglages du jeu (enregistrés sur cet appareil).'), h('div', 'setwrap', settingsForm(this.ctx.menu))); break;
     }
-    this.main.append(h('div', 'closehint', 'Tab ou Échap : fermer la tablette'));
     this.refresh();
   }
 
@@ -258,7 +257,7 @@ export class Efb {
       h('p', 'lead', `${p.runway} · computed ${utcLabel(schedule(tod).std - 30)} · A320-214 CFM56-5B4/P`),
       h('div', 'cards',
         kv('CONF', p.conf, true), kv('FLEX TO TEMP', `${p.flex} °C`, true), kv('V1', `${p.v1} kt`, true), kv('VR', `${p.vr} kt`, true), kv('V2', `${p.v2} kt`, true),
-        kv('THS', p.ths), kv('THR RED / ACC', `${p.thrRed} / ${p.acc} ft`), kv('EO ACC', `${p.eoAcc} ft`),
+        kv('THS', p.ths), kv('THR RED / ACC (ft)', `${p.thrRed}/${p.acc}`), kv('EO ACC (ft)', `${p.eoAcc}`),
       ),
       h('h3', null, 'Runway & conditions'),
       h('table', 't',
@@ -448,8 +447,8 @@ export class Efb {
       </g>
       <g id="p-bridge"><rect x="42" y="50" width="86" height="16" rx="2" class="eq"/><circle cx="36" cy="58" r="12" class="eq"/></g>
       <g id="p-gpu"><rect x="194" y="30" width="26" height="16" rx="2" class="eq"/><path id="p-cable" d="M194 40 C182 42 172 48 165 52" class="cable"/></g>
-      <g id="p-fuel"><rect x="226" y="252" width="44" height="18" rx="3" class="eq"/><path d="M226 258 C214 252 206 246 200 240" class="cable"/></g>
-      <g id="p-asu"><rect x="60" y="262" width="30" height="16" rx="2" class="eq"/><path d="M90 268 C110 262 124 252 138 244" class="cable"/></g>
+      <g id="p-fuel"><rect x="226" y="252" width="44" height="18" rx="3" class="eq"/><path d="M226 258 C214 252 206 246 200 240" class="cable"/><text x="248" y="284" text-anchor="middle" class="lab">avitailleur</text></g>
+      <g id="p-asu"><rect x="60" y="262" width="30" height="16" rx="2" class="eq"/><path d="M90 268 C110 262 124 252 138 244" class="cable"/><text x="75" y="294" text-anchor="middle" class="lab">ASU</text></g>
       <g id="p-chocks"><rect x="143" y="76" width="4" height="7"/><rect x="153" y="76" width="4" height="7"/><rect x="128" y="210" width="4" height="8"/><rect x="168" y="210" width="4" height="8"/></g>
       <rect id="d-PAX_L1" class="d" x="129" y="54" width="6" height="12" rx="1"/>
       <rect id="d-PAX_R1" class="d" x="165" y="54" width="6" height="12" rx="1"/>
@@ -463,8 +462,6 @@ export class Efb {
       <text x="172" y="129">AV</text><text x="172" y="273">AR</text><text x="172" y="294">VRAC</text>
       <text x="36" y="84" text-anchor="middle" class="lab">passerelle</text>
       <text x="207" y="24" text-anchor="middle" class="lab">GPU</text>
-      <text x="248" y="284" text-anchor="middle" class="lab">avitailleur</text>
-      <text x="75" y="294" text-anchor="middle" class="lab">ASU</text>
       <text x="150" y="398" text-anchor="middle" class="lab">poste 14 · nez vers le terminal</text>`;
     return svg;
   }

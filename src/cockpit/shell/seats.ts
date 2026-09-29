@@ -51,6 +51,19 @@ export function superEllipsoid(a: number, b: number, c: number, e1: number, e2: 
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(idx);
   g.computeVertexNormals();
+  // box-projected UVs (metres × 4): no pole pinching on the cushion tops
+  {
+    const P = g.getAttribute('position') as THREE.BufferAttribute;
+    const N = g.getAttribute('normal') as THREE.BufferAttribute;
+    const U = g.getAttribute('uv') as THREE.BufferAttribute;
+    for (let i = 0; i < P.count; i++) {
+      const ax = Math.abs(N.getX(i)), ay = Math.abs(N.getY(i)), az = Math.abs(N.getZ(i));
+      const x = P.getX(i) * 4, y = P.getY(i) * 4, z = P.getZ(i) * 4;
+      if (ay >= ax && ay >= az) U.setXY(i, x, z);
+      else if (ax >= az) U.setXY(i, z, y);
+      else U.setXY(i, x, y);
+    }
+  }
   // weld the seam normals (u = 0 and u = 1 columns) and the poles
   const n = g.getAttribute('normal') as THREE.BufferAttribute;
   for (let j = 0; j <= nv; j++) {
@@ -159,7 +172,11 @@ function buildSeat(app: App, inboard: number): THREE.Group {
     base.at(geo.roundedBox(0.05, 0.03, 0.48, 0.008), K.darkMetal, sx, yF + 0.03, -0.1);
     for (const sz of [-0.3, 0.1]) base.at(geo.cylZ(0.016, 0.016, 0.03, 16), K.darkMetal, sx, yF + 0.028, sz, 0, Math.PI / 2, 0);
   }
-  base.at(geo.roundedBox(0.3, 0.34, 0.34, 0.02), M.seatFabric, 0, yF + 0.24, -0.12);
+  // column: dark metal structure with a front access cover, the vertical-adjustment actuator and side plates
+  base.at(geo.roundedBox(0.26, 0.34, 0.3, 0.015), M.seatMetal, 0, yF + 0.24, -0.12);
+  base.at(geo.roundedBox(0.2, 0.26, 0.01, 0.006), M.seatFabric, 0, yF + 0.25, -0.272);
+  for (const sx of [-0.135, 0.135]) base.at(geo.roundedBox(0.012, 0.3, 0.26, 0.004), K.darkMetal, sx, yF + 0.24, -0.12);
+  base.at(geo.cylZ(0.022, 0.022, 0.26, 16), K.chrome, 0, yF + 0.2, -0.02, -Math.PI / 2);
   base.at(geo.roundedBox(0.36, 0.05, 0.4, 0.015), M.seatMetal, 0, -0.145, -0.16);
   // fore/aft lever (front, under the pan) and height lever (inboard side)
   base.at(geo.roundedBox(0.16, 0.012, 0.02, 0.005), K.chrome, 0, -0.08, -0.43);

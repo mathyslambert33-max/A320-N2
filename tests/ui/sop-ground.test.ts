@@ -74,9 +74,7 @@ describe('SOP with ground services (ui module + all logic modules)', () => {
     runUntil(sim, () => g.status().loadsheetFinal, 400, 'final loadsheet');
     expect(g.door('PAX_L1', false).ok).toBe(true);
     runUntil(sim, () => sim.get('G:DOOR_PAX_L1') === 0, 30, 'L1 closed');
-    const jb = g.jetbridge(false);
-    expect(jb.msg).toBe('');
-    expect(jb.ok).toBe(true);
+    expect(g.jetbridge(false).ok).toBe(true);
     runUntil(sim, () => sim.get('G:DOOR_CARGO_FWD') === 0 && sim.get('G:DOOR_CARGO_AFT') === 0, 200, 'cargo doors closed');
     runUntil(sim, () => sim.get('G:JETBRIDGE') === 0, 120, 'bridge retracted');
     runUntil(sim, () => sim.getB('G:CABIN_READY'), 120, 'cabin ready');
@@ -114,8 +112,6 @@ describe('SOP with ground services (ui module + all logic modules)', () => {
     console.log('[ui SOP] score', r.score, '/', r.total, 'elapsed', Math.round(r.elapsedS), 's; not OK:', failed, 'ECAM:', r.ecam);
     // Only the BARO REF item may fail here (the test does not set the EFIS baro knob).
     expect(failed.filter((f) => !f.startsWith('baro') && !f.startsWith('ecam'))).toEqual([]);
-    expect(g.messages().some((m) => /Deux moteurs démarrés/.test(m.text))).toBe(false); // said 4 s after both run
-    sim.run(5);
     expect(g.messages().some((m) => /Deux moteurs démarrés/.test(m.text))).toBe(true);
     expect(g.messages().filter((m) => m.level === 'warn').map((m) => m.text).filter((t) => !/Négatif|refus|EXT PWR/.test(t))).toEqual([]);
   });

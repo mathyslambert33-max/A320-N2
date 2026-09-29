@@ -87,18 +87,15 @@ export class DecalBuilder {
       if (L < 1e-4) continue;
       const dx = (x1 - x0) / L, dz = (z1 - z0) / L;
       const nx = -dz, nz = dx;
-      let s = 0;
-      while (s < L) {
-        const ph = (acc + s) % period;
-        if (ph < on) {
-          const e = Math.min(L, s + (on - ph));
-          const ax = x0 + dx * s + nx * off, az = z0 + dz * s + nz * off;
-          const bx = x0 + dx * e + nx * off, bz = z0 + dz * e + nz * off;
-          this.quad([[ax - nx * hw, az - nz * hw], [bx - nx * hw, bz - nz * hw], [bx + nx * hw, bz + nz * hw], [ax + nx * hw, az + nz * hw]], c);
-          s = e;
-        } else {
-          s = Math.min(L, s + (period - ph));
-        }
+      // dash k covers [k*period, k*period + on] in cumulative distance: intersect with [acc, acc + L]
+      const k0 = Math.floor(acc / period), k1 = Math.floor((acc + L) / period);
+      for (let k = k0; k <= k1; k++) {
+        const s = Math.max(0, k * period - acc);
+        const e = Math.min(L, k * period + on - acc);
+        if (e - s < 0.01) continue;
+        const ax = x0 + dx * s + nx * off, az = z0 + dz * s + nz * off;
+        const bx = x0 + dx * e + nx * off, bz = z0 + dz * e + nz * off;
+        this.quad([[ax - nx * hw, az - nz * hw], [bx - nx * hw, bz - nz * hw], [bx + nx * hw, bz + nz * hw], [ax + nx * hw, az + nz * hw]], c);
       }
       acc += L;
     }

@@ -58,7 +58,7 @@ export interface GroundBuild {
   lightLines: { type: number; pts: number[] }[];
 }
 
-export function buildGround(stand: StandDef, anisotropy: number): GroundBuild {
+export function buildGround(stand: StandDef, anisotropy: number, dbg: Set<string> = new Set()): GroundBuild {
   const group = new THREE.Group();
   group.name = 'world-ground';
   const w = (x: number, y: number) => dataToWorldXZ(x, y, stand);
@@ -74,7 +74,7 @@ export function buildGround(stand: StandDef, anisotropy: number): GroundBuild {
   grass.name = 'grass';
   grass.receiveShadow = true;
   grass.renderOrder = -10;
-  group.add(grass);
+  if (!dbg.has('grass')) group.add(grass);
 
   // --- pavements ---
   const asph: { outer: number[]; holes: number[][] }[] = [];
@@ -107,7 +107,7 @@ export function buildGround(stand: StandDef, anisotropy: number): GroundBuild {
   const asphalt = new THREE.Mesh(polygonsGeometry(asph, 8), groundMaterial({ map: asphTex, roughness: 0.92, metalness: 0 }, 1));
   asphalt.name = 'asphalt';
   asphalt.receiveShadow = true;
-  group.add(asphalt);
+  if (!dbg.has('pave')) group.add(asphalt);
   const concTex = concreteTexture();
   concTex.anisotropy = anisotropy;
   if (conc.length) {
@@ -134,7 +134,7 @@ export function buildGround(stand: StandDef, anisotropy: number): GroundBuild {
   const paintMesh = new THREE.Mesh(paint.build(), paintMat);
   paintMesh.name = 'taxiway-markings';
   paintMesh.receiveShadow = true;
-  group.add(paintMesh);
+  if (!dbg.has('paint')) group.add(paintMesh);
   const rwMesh = new THREE.Mesh(rwDecals.build(), paintMat);
   rwMesh.name = 'runway-markings';
   rwMesh.receiveShadow = true;
@@ -156,7 +156,7 @@ export function buildGround(stand: StandDef, anisotropy: number): GroundBuild {
       q.rotation.y = Math.atan2(-dx, -dz);
       q.scale.set(1, 1, 1);
       q.name = `rwy-${e.id}`;
-      group.add(q);
+      if (!dbg.has('rwtext')) group.add(q);
     }
   }
   return { group, lightLines };

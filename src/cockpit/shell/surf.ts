@@ -346,7 +346,19 @@ export class MergeBag {
   private lists = new Map<THREE.Material, THREE.BufferGeometry[]>();
   add(g: THREE.BufferGeometry, mat: THREE.Material, m?: THREE.Matrix4): void {
     const s = toSimple(g);
-    if (m) s.applyMatrix4(m);
+    if (m) {
+      s.applyMatrix4(m);
+      if (m.determinant() < 0) {
+        // mirrored: restore front faces (swap 2nd/3rd vertex of every triangle)
+        for (const k of Object.keys(s.attributes)) {
+          const a = s.getAttribute(k) as THREE.BufferAttribute;
+          const arr = a.array as Float32Array, is = a.itemSize;
+          for (let i = 0; i < a.count; i += 3) for (let c = 0; c < is; c++) {
+            const t = arr[(i + 1) * is + c]; arr[(i + 1) * is + c] = arr[(i + 2) * is + c]; arr[(i + 2) * is + c] = t;
+          }
+        }
+      }
+    }
     let l = this.lists.get(mat);
     if (!l) this.lists.set(mat, (l = []));
     l.push(s);
@@ -363,7 +375,11 @@ export class MergeBag {
     this.add(s, mat);
     this.add(mirrorX(s), mat);
   }
-  build(name: string, o: { castShadow?: boolean | ((m: THREE.Material) => boolean); receiveShadow?: boolean } = {}): THREE.Group {
+  /**
+   * One mesh per material. Meshes are flagged `userData.shellStatic` (merged later with every other static shell
+   * mesh by `mergeStatics`) unless `dynamic` (moving / interactive / transparent parts).
+   */
+  build(name: string, o: { castShadow?: boolean | ((m: THREE.Material) => boolean); receiveShadow?: boolean; dynamic?: boolean } = {}): THREE.Group {
     const grp = new THREE.Group();
     grp.name = name;
     for (const [mat, list] of this.lists) {
@@ -372,9 +388,57 @@ export class MergeBag {
       mesh.name = `${name}:${(mat as any).name || 'mat'}`;
       mesh.castShadow = typeof o.castShadow === 'function' ? o.castShadow(mat) : o.castShadow ?? true;
       mesh.receiveShadow = o.receiveShadow ?? true;
+      mesh.userData.shellStatic = !o.dynamic;
       grp.add(mesh);
     }
     this.lists.clear();
     return grp;
   }
+}
+
+/**
+ * Merge every mesh flagged `userData.shellStatic` under `root` (world transforms relative to root) into one mesh
+ * per material and shadow-casting flag. Returns the merged meshes (added to `root` in a 'shell:statics' group).
+ */
+export function mergeStatics(root: THREE.Object3D): THREE.Mesh[] {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const groups = new Map<string, { mat: THREE.Material; cast: boolean; list: THREE.BufferGeometry[] }>();
+  const victims: THREE.Mesh[] = [];
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh || !m.userData.shellStatic || (m as any).isInstancedMesh) return;
+    const mat = m.material as THREE.Material;
+    const key = `${mat.uuid}|${m.castShadow ? 1 : 0}`;
+    let e = groups.get(key);
+    if (!e) groups.set(key, (e = { mat, cast: m.castShadow, list: [] }));
+    const g = toSimple(m.geometry);
+    const mw = new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld);
+    g.applyMatrix4(mw);
+    if (mw.determinant() < 0) {
+      for (const k of Object.keys(g.attributes)) {
+        const a = g.getAttribute(k) as THREE.BufferAttribute;
+        const arr = a.array as Float32Array, is = a.itemSize;
+        for (let i = 0; i < a.count; i += 3) for (let c = 0; c < is; c++) {
+          const t = arr[(i + 1) * is + c]; arr[(i + 1) * is + c] = arr[(i + 2) * is + c]; arr[(i + 2) * is + c] = t;
+        }
+      }
+    }
+    e.list.push(g);
+    victims.push(m);
+  });
+  for (const v of victims) { v.removeFromParent(); v.geometry.dispose(); }
+  const out: THREE.Mesh[] = [];
+  const grp = new THREE.Group();
+  grp.name = 'shell:statics';
+  for (const e of groups.values()) {
+    const mesh = new THREE.Mesh(mergeSimple(e.list), e.mat);
+    mesh.name = `shell:static:${(e.mat as any).name || 'mat'}`;
+    mesh.castShadow = e.cast;
+    mesh.receiveShadow = true;
+    grp.add(mesh);
+    out.push(mesh);
+  }
+  root.add(grp);
+  return out;
 }

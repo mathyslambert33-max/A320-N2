@@ -7,7 +7,8 @@ import type { App } from '../../app';
 import type { Handle } from '../kit';
 import { geo } from '../kit';
 import { materials } from '../kit/materials';
-import { Plate, leg, m, pedMats, toggle, blackIndex } from './lib';
+import { Plate, leg, m, pedMats, toggle, blackIndex, canvasTexture } from './lib';
+import { BACKLIGHT_COLOR } from '../kit/materials';
 import { atlas } from '../kit/atlas';
 import { RMP_CANVAS } from './displays';
 
@@ -24,9 +25,12 @@ export function buildRmp(app: App, n: 1 | 2 | 3): THREE.Group {
   pl.label('STBY/CRS', 40.5, 38.2, 2.3);
   const wy = 26.6;
   const ww = 45, wh = ww * (RMP_CANVAS.h / (RMP_CANVAS.w / 2));
-  pl.window7(R, -40.5, wy, ww, wh, [0, 0.5, 0, 1], { w: ww + 5.5, h: wh + 5 });
-  pl.window7(R, 40.5, wy, ww, wh, [0.5, 1, 0, 1], { w: ww + 5.5, h: wh + 5 });
-  pl.pb(`${R}_XFER`, 0, wy, { w: 12.5, h: 8.4, capText: '↔' });
+  pl.windows7(R, [
+    { x: -40.5, y: wy, w: ww, h: wh, uv: [0, 0.5, 0, 1], bw: ww + 5.5, bh: wh + 5 },
+    { x: 40.5, y: wy, w: ww, h: wh, uv: [0.5, 1, 0, 1], bw: ww + 5.5, bh: wh + 5 },
+  ]);
+  const xfer = pl.pb(`${R}_XFER`, 0, wy, { w: 12.5, h: 8.4 });
+  (xfer.children[0] as THREE.Group).add(xferArrow(app));
   // transceiver keys
   const kw = 13.4, kh = 9;
   pl.pb(`${R}_VHF1`, -52, 5, { w: kw, h: kh, capText: 'VHF 1' });
@@ -136,6 +140,30 @@ export function buildAcp(app: App, n: 1 | 2): THREE.Group {
   pl.label('MLS', xs[4], -25.6, 2.0, { alpha: 0.35 });
   pl.addStatic(geo.cylZ(m(4.2), m(4.4), 0.0012, 28), M.bezel, xs[4], -35.6, 0);
   return pl.finish();
+}
+
+let _arrowMat: THREE.MeshStandardMaterial | null = null;
+/** Double-headed arrow printed on the RMP transfer key (back-lit by the integral lighting). */
+function xferArrow(app: App): THREE.Mesh {
+  if (!_arrowMat) {
+    const tex = canvasTexture(128, 64, (c) => {
+      c.fillStyle = '#000';
+      c.fillRect(0, 0, 128, 64);
+      c.fillStyle = '#fff';
+      c.beginPath();
+      c.moveTo(10, 32); c.lineTo(36, 10); c.lineTo(36, 24); c.lineTo(92, 24); c.lineTo(92, 10); c.lineTo(118, 32);
+      c.lineTo(92, 54); c.lineTo(92, 40); c.lineTo(36, 40); c.lineTo(36, 54); c.closePath();
+      c.fill();
+    });
+    tex.colorSpace = THREE.NoColorSpace;
+    const mat = new THREE.MeshStandardMaterial({ color: 0xe8e8e2, alphaMap: tex, transparent: true, depthWrite: false, roughness: 0.6, emissive: BACKLIGHT_COLOR, emissiveIntensity: 0, polygonOffset: true, polygonOffsetFactor: -1 });
+    _arrowMat = mat;
+    let last = -1;
+    app.kit.addInstance({ id: 'RMP_XFER_ARROW', sync: (sim) => { const v = sim.get('S:INTLT_INTEG_MAIN'); if (v !== last) { last = v; mat.emissiveIntensity = v * 1.4; } } });
+  }
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.0095, 0.0047), _arrowMat);
+  mesh.position.z = 0.00012;
+  return mesh;
 }
 
 /** Keep the tree-shaker from dropping helper imports used only in some builds. */

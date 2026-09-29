@@ -99,8 +99,14 @@ export const ceilMap: SurfMap = (u, w, out) => {
   const tA = wallTopTangent(u, _t);
   const B = A.z <= OVHD_Z_FWD ? OVHD_FWD_CORNER.clone() : new THREE.Vector3(OVHD_X, ovhdJoinY(A.z), A.z);
   const L = A.distanceTo(B);
-  const C1 = A.clone().addScaledVector(tA, L * 0.42);
-  const C2 = B.clone().add(new THREE.Vector3(L * 0.38, -0.02 * L, 0));
+  // Along the side walls the section bulges (wall tangent → horizontal at the overhead); toward the windshield
+  // header it flattens into a straight ruled surface so the narrow front strip has no ripples.
+  const f = Math.min(1, Math.max(0, (-0.5 - A.z) / 0.28));
+  const ab = B.clone().sub(A).normalize();
+  const t0 = tA.clone().lerp(ab, f).normalize();
+  const t1 = new THREE.Vector3(1, -0.02, 0).lerp(ab.clone().negate(), f).normalize();
+  const C1 = A.clone().addScaledVector(t0, L * 0.42);
+  const C2 = B.clone().addScaledVector(t1, L * 0.38);
   const s = 1 - w;
   out.set(0, 0, 0)
     .addScaledVector(A, s * s * s)
@@ -298,6 +304,32 @@ function trims(bag: MergeBag): void {
   const curve = new THREE.CatmullRomCurve3(rail);
   const tube = new THREE.TubeGeometry(curve, 60, 0.0065, 8, false);
   bag.both(tube, M.trim);
+  // lining panel seams (thin dark grooves just proud of the surface): below the window band, between the side
+  // windows, aft of the fixed window, and across the ceiling above the sliding window
+  const seam = (pts: Array<[number, number]>, map: SurfMap, w = 0.003) => {
+    const n = new THREE.Vector3();
+    const rings: THREE.Vector3[][] = [[], []];
+    for (let i = 0; i < pts.length; i++) {
+      const [u, v] = pts[i];
+      const P = map(u, v, new THREE.Vector3());
+      surfNormal(map, u, v, n);
+      const j = Math.min(pts.length - 1, i + 1), k = Math.max(0, i - 1);
+      const t = map(pts[j][0], pts[j][1], new THREE.Vector3()).sub(map(pts[k][0], pts[k][1], new THREE.Vector3())).normalize();
+      const side = new THREE.Vector3().crossVectors(n, t).normalize();
+      rings[0].push(P.clone().addScaledVector(n, 0.0006).addScaledVector(side, -w / 2));
+      rings[1].push(P.clone().addScaledVector(n, 0.0006).addScaledVector(side, w / 2));
+    }
+    bag.both(ringStrip(rings, { closed: false, faceToward: rings[0][0].clone().addScaledVector(n, 1) }), M.liningDark);
+  };
+  const line = (a: [number, number], b: [number, number], n = 24): Array<[number, number]> => Array.from({ length: n + 1 }, (_, i) => [a[0] + ((b[0] - a[0]) * i) / n, a[1] + ((b[1] - a[1]) * i) / n]);
+  const yS = 0.985;
+  seam(line([uSide(-0.83, yS), yS], [uSide(1.34, yS), yS], 60), wallMap);
+  seam(line([uSide(0.105, yS), yS], [uSide(0.105, 1.745), 1.745]), wallMap);
+  seam(line([uSide(0.74, yS), yS], [uSide(0.74, 1.745), 1.745]), wallMap);
+  seam(line([uSide(0.74, 0.02), 0.02], [uSide(0.74, yS), yS]), wallMap);
+  const uc = (z: number) => z - planAt(Y_WALL_TOP).zt;
+  seam(line([uc(0.105), 0.02], [uc(0.105), 0.98]), ceilMap);
+  seam(line([uc(0.74), 0.02], [uc(0.74), 0.98]), ceilMap);
   // centre post cover: rounded bar on the windshield frame plane (x = 0), from the glareshield to the header
   const post: THREE.Vector3[] = [];
   for (let i = 0; i <= 12; i++) {

@@ -60,10 +60,11 @@ export class Environment {
   private readonly listeners: ((s: EnvState) => void)[] = [];
   private readonly tmpC = new THREE.Color();
 
-  constructor(private app: App, tod: TimeOfDay) {
+  constructor(private app: App, tod: TimeOfDay, private readonly debugOff: Set<string> = new Set()) {
     this.sky = new SkySystem(app.renderer);
-    app.scene.add(this.sky.group);
+    if (!debugOff.has('sky')) app.scene.add(this.sky.group);
     this.key = new KeyLight(app.scene, app.quality);
+    if (debugOff.has('shadows')) this.key.light.castShadow = false;
     this.shadows = new FarShadows(app.renderer, app.scene, app.quality);
     this.fog = new THREE.FogExp2(0x9fb0c0, 0.00005);
     app.scene.fog = this.fog;
@@ -125,9 +126,9 @@ export class Environment {
       u.nightFactor.value = s.night;
       // hazier and redder toward sunset
       const low = THREE.MathUtils.smoothstep(-s.sunEl, -20, 2);
-      u.turbidity.value = 2.6 + 1.6 * low;
-      u.rayleigh.value = 1.3 + 0.9 * low;
-      u.mieCoefficient.value = 0.0045 + 0.002 * low;
+      u.turbidity.value = 2.2 + 1.8 * low;
+      u.rayleigh.value = 1.8 + 0.6 * low;
+      u.mieCoefficient.value = 0.004 + 0.002 * low;
       const tr = sunTransmittance(s.sunEl, 2.4);
       const lum = 0.2126 * tr[0] + 0.7152 * tr[1] + 0.0722 * tr[2];
       const sc = u.sunColor.value.setRGB(tr[0], tr[1], tr[2]);
@@ -181,7 +182,7 @@ export class Environment {
     this.sky.mesh.position.copy(this.app.camera.getWorldPosition(this.tmpV));
 
     // --- environment map: when the sun moved or every 90 s ---
-    if (force || t - this.lastEnv > 90 || s.sunDir.angleTo(this.envSunDir) > 0.01 || Math.abs(s.night - this.envNight) > 0.05) {
+    if (this.debugOff.has('env')) { /* skip */ } else if (force || t - this.lastEnv > 90 || s.sunDir.angleTo(this.envSunDir) > 0.01 || Math.abs(s.night - this.envNight) > 0.05) {
       this.lastEnv = t;
       this.envSunDir.copy(s.sunDir);
       this.envNight = s.night;
@@ -192,7 +193,7 @@ export class Environment {
     }
 
     // --- exterior shadow cascades ---
-    this.shadows.update(this.standCenter, this.keyDir, t);
+    if (!this.debugOff.has('shadows')) this.shadows.update(this.standCenter, this.keyDir, t);
     WU.wlShadowParams.value.x *= THREE.MathUtils.smoothstep(this.state.sunEl, -1, 2) > 0.02 ? 1 : 0;
   }
 

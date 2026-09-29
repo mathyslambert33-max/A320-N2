@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import type { App } from '../../app';
 import type { Handle, InteractEvent } from '../kit';
 import { geo } from '../kit';
-import { materials } from '../kit/materials';
+import { materials, BACKLIGHT_COLOR } from '../kit/materials';
 import { Plate, m, pedMats, DEG, canvasTexture, extrudeX } from './lib';
 import {
   TLA, TLA_DETENTS, tlaAngle, thrustDrag, thrustStep, clampTrim, thsForCg, TRIM_WHEEL_DEG_PER_THS, PITCH_TRIM_MIN, PITCH_TRIM_MAX,
@@ -58,22 +58,23 @@ function arcStrip(x0: number, R0: number, x1: number, R1: number, seg = 48): THR
 const vOf = (aDeg: number) => (aDeg - Q.a0) / (Q.a1 - Q.a0);
 
 /** TLA markings, slots and centre degree scale painted on the cover top. */
-function coverTexture(): THREE.CanvasTexture {
+function coverTexture(mask = false): THREE.CanvasTexture {
   const W = 512, H = 1024;
   return canvasTexture(W, H, (c) => {
-    c.fillStyle = '#2a2e33';
+    c.fillStyle = mask ? '#000' : '#2a2e33';
     c.fillRect(0, 0, W, H);
     const X = (x: number) => ((x + Q.hw) / (2 * Q.hw)) * W; // metres → px
     const Y = (tla: number) => (1 - vOf(tlaAngle(tla))) * H;
     // lever slots
     for (const lx of Q.lx) {
+      if (mask) break;
       c.fillStyle = '#060707';
       c.fillRect(X(lx - 0.0068), Y(TLA.TOGA) - 60, X(lx + 0.0068) - X(lx - 0.0068), Y(TLA.MAX_REV) - Y(TLA.TOGA) + 120);
       c.fillStyle = '#111213';
       c.fillRect(X(lx - 0.0068), Y(TLA.TOGA) - 60, 6, Y(TLA.MAX_REV) - Y(TLA.TOGA) + 120);
     }
-    c.fillStyle = '#e9e6de';
-    c.strokeStyle = '#e9e6de';
+    c.fillStyle = mask ? '#fff' : '#e9e6de';
+    c.strokeStyle = mask ? '#fff' : '#e9e6de';
     c.textBaseline = 'middle';
     // centre TLA degree scale 0..45 (between the slots)
     c.textAlign = 'center';
@@ -141,16 +142,16 @@ function coverTexture(): THREE.CanvasTexture {
 }
 
 /** THS scale strip: degrees UP / DN with CG marks, green take-off band. `mirror` for the right-hand strip. */
-function thsTexture(mirror: boolean): THREE.CanvasTexture {
+function thsTexture(mirror: boolean, mask = false): THREE.CanvasTexture {
   const W = 128, H = 1024;
   return canvasTexture(W, H, (c) => {
-    c.fillStyle = '#0c0d0e';
+    c.fillStyle = mask ? '#000' : '#0c0d0e';
     c.fillRect(0, 0, W, H);
     const Y = (ths: number) => (1 - vOf(thsAngle(ths))) * H;
     // u = 0 is the inner edge (quadrant side), u = 1 the outer edge (wheel side)
     const U = (u: number) => (mirror ? u : 1 - u) * W;
     // green band (take-off range)
-    c.fillStyle = '#2fd15a';
+    c.fillStyle = mask ? '#000' : '#2fd15a';
     const gx0 = U(0.02), gx1 = U(0.13);
     c.fillRect(Math.min(gx0, gx1), Y(3.9), Math.abs(gx1 - gx0), Y(-2.6) - Y(3.9));
     c.fillStyle = '#ffa12a';
@@ -207,7 +208,8 @@ export function buildQuadrant(app: App, root: THREE.Group): void {
   root.add(g);
 
   // ---- housing: cover top, side walls, THS strips, front / aft closures
-  const coverMat = new THREE.MeshStandardMaterial({ map: coverTexture(), roughness: 0.6, metalness: 0.15 });
+  const coverMat = new THREE.MeshStandardMaterial({ map: coverTexture(), emissiveMap: coverTexture(true), emissive: BACKLIGHT_COLOR, emissiveIntensity: 0, roughness: 0.6, metalness: 0.15 });
+  const litMats: THREE.MeshStandardMaterial[] = [coverMat];
   const cover = new THREE.Mesh(arcStrip(-Q.hw, Q.R, Q.hw, Q.R, 64), coverMat);
   // arcStrip UV: u across x (0 at −hw), v along the arc
   cover.name = 'PED_THR:cover';
@@ -215,8 +217,8 @@ export function buildQuadrant(app: App, root: THREE.Group): void {
   g.add(cover);
   kit.interaction.addBlocker(cover);
   for (const side of [-1, 1] as const) {
-    const tex = thsTexture(side > 0);
-    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, metalness: 0.05 });
+    const mat = new THREE.MeshStandardMaterial({ map: thsTexture(side > 0), emissiveMap: thsTexture(side > 0, true), emissive: BACKLIGHT_COLOR, emissiveIntensity: 0, roughness: 0.55, metalness: 0.05 });
+    litMats.push(mat);
     // left-to-right vertex order so the normals face up (u = 0 on the left edge of each strip)
     const strip = new THREE.Mesh(side < 0 ? arcStrip(-Q.sx, Q.sR, -Q.hw, Q.R, 64) : arcStrip(Q.hw, Q.R, Q.sx, Q.sR, 64), mat);
     strip.name = 'PED_THR:ths';
@@ -248,6 +250,18 @@ export function buildQuadrant(app: App, root: THREE.Group): void {
   const ends = geo.mergeGeometries([geo.normalise(endFace(Q.a0)), geo.normalise(endFace(Q.a1))])!;
   const endMesh = new THREE.Mesh(ends, new THREE.MeshStandardMaterial({ color: 0x2a2e33, roughness: 0.62, metalness: 0.2, side: THREE.DoubleSide }));
   g.add(endMesh);
+
+  // markings back-lit by the INTEG LT MAIN PNL & PED knob, like the panel engravings
+  let lastLit = -1;
+  kit.addInstance({
+    id: 'PED_THR_LIGHTING',
+    sync: (sim) => {
+      const v = sim.get('S:INTLT_INTEG_MAIN');
+      if (v === lastLit) return;
+      lastLit = v;
+      for (const mt of litMats) mt.emissiveIntensity = v * 1.8;
+    },
+  });
 
   // ---- thrust levers
   for (const n of [1, 2] as const) buildThrustLever(app, g, n);
@@ -289,9 +303,10 @@ function buildThrustLever(app: App, parent: THREE.Group, n: 1 | 2): void {
   pivot.add(arm);
   // grip: horizontal cylinder with end collars
   const grip = new THREE.Group();
+  grip.name = id;
   grip.position.set(out * 0.0012, 0, Q.gR);
   pivot.add(grip);
-  const glen = 0.051, gr = 0.0162;
+  const glen = 0.051, gr = 0.0178;
   const body = new THREE.Mesh(geo.latheZ('pedGrip', [
     [0, -glen / 2], [gr * 0.93, -glen / 2], [gr, -glen / 2 + 0.003], [gr * 0.94, -glen / 2 + 0.0055], [gr * 0.96, 0], [gr * 0.94, glen / 2 - 0.0055], [gr, glen / 2 - 0.003], [gr * 0.93, glen / 2], [0, glen / 2],
   ], 40), PM.gripBlack);
@@ -307,6 +322,7 @@ function buildThrustLever(app: App, parent: THREE.Group, n: 1 | 2): void {
   // A/THR instinctive disconnect pb on the outboard end face
   const discId = `THR_ATHR_DISC${n}`;
   const disc = new THREE.Group();
+  disc.name = discId;
   disc.position.x = out * (glen / 2);
   grip.add(disc);
   const bez = new THREE.Mesh(geo.latheZ('pedAthrBez', [[0.0058, 0], [0.0075, 0], [0.0075, 0.0012], [0.0058, 0.0016]], 28), PM.gripBlack);
@@ -440,19 +456,19 @@ function trimWheelGeometry(): { rim: THREE.BufferGeometry; grips: THREE.BufferGe
   const gl: THREE.BufferGeometry[] = [];
   for (let k = 0; k < 6; k++) {
     const a = (k * 60 + 30) * DEG;
-    const blk = geo.roundedBox(T * 2 + 0.0016, 0.024, 0.006, 0.0025).clone();
-    const mtx = new THREE.Matrix4().makeRotationX(-a).multiply(new THREE.Matrix4().makeTranslation(0, 0, R - 0.0005));
+    const blk = geo.roundedBox(T * 2 + 0.0008, 0.021, 0.0042, 0.0018).clone();
+    const mtx = new THREE.Matrix4().makeRotationX(-a).multiply(new THREE.Matrix4().makeTranslation(0, 0, R - 0.0006));
     gl.push(geo.normalise(blk).applyMatrix4(mtx));
   }
   const grips = geo.mergeGeometries(gl)!;
   // spokes + hub (mostly hidden inside the pedestal)
-  const hubParts: THREE.BufferGeometry[] = [geo.normalise(geo.cylZ(0.025, 0.025, 0.02, 24).clone().rotateY(Math.PI / 2).translate(-0.01, 0, 0))];
-  for (let k = 0; k < 4; k++) {
-    const sp = new THREE.BoxGeometry(0.008, 0.012, R - 0.02);
-    sp.translate(0, 0, (R - 0.02) / 2 + 0.01);
-    sp.applyMatrix4(new THREE.Matrix4().makeRotationX(k * Math.PI / 2 + Math.PI / 4));
-    hubParts.push(geo.normalise(sp));
-  }
+  // web: a slightly dished disc filling the rim (the wheel is solid, not spoked), with a raised hub
+  const web = new THREE.LatheGeometry([
+    [0, -0.004], [0.028, -0.004], [0.034, -0.0025], [R - 0.021, -0.0025], [R - 0.0185, -T * 0.7], [R - 0.0185, T * 0.7], [R - 0.021, 0.0025],
+    [0.034, 0.0025], [0.028, 0.004], [0, 0.004],
+  ].map(([r, x]) => new THREE.Vector2(r, x)), 64);
+  web.rotateZ(-Math.PI / 2);
+  const hubParts: THREE.BufferGeometry[] = [geo.normalise(web), geo.normalise(geo.cylZ(0.018, 0.02, 0.028, 32).clone().rotateY(Math.PI / 2).translate(-0.014, 0, 0))];
   const hub = geo.mergeGeometries(hubParts)!;
   return { rim, grips, hub };
 }
@@ -460,35 +476,43 @@ function trimWheelGeometry(): { rim: THREE.BufferGeometry; grips: THREE.BufferGe
 function buildTrimWheels(app: App, parent: THREE.Group): void {
   const kit = app.kit;
   const PM = pedMats();
+  const M = materials();
   const id = 'PITCH_TRIM';
   const def = kit.def(id);
   const { rim, grips, hub } = trimWheelGeometry();
   const wheels: THREE.Group[] = [];
   for (const side of [-1, 1] as const) {
     const w = new THREE.Group();
+    if (side > 0) w.name = id;
     w.position.set(side * Q.wx, Q.wy, Q.wz);
     parent.add(w);
     const r = new THREE.Mesh(rim, PM.trimWheel);
     const gm = new THREE.Mesh(grips, PM.trimGrip);
-    const h = new THREE.Mesh(hub, PM.leverArm);
+    const h = new THREE.Mesh(hub, M.knob);
     r.castShadow = true; gm.castShadow = true;
     w.add(r, gm, h);
     wheels.push(w);
   }
   // THS pointers riding on the inner edge of each THS strip
   const pointers: THREE.Group[] = [];
-  const ptrMat = new THREE.MeshStandardMaterial({ color: 0xf4f2ec, roughness: 0.4, metalness: 0 });
+  const ptrMat = new THREE.MeshStandardMaterial({ color: 0xfff3c4, roughness: 0.35, metalness: 0, emissive: 0xfff0c0, emissiveIntensity: 0.08 });
   for (const side of [-1, 1] as const) {
     const pg = new THREE.Group();
     pg.position.set(0, Q.py, Q.pz);
     parent.add(pg);
-    const tri = new THREE.Shape([new THREE.Vector2(0, -0.0034), new THREE.Vector2(0, 0.0034), new THREE.Vector2(side * 0.0085, 0)]);
-    const ptr = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 0.0012, bevelEnabled: false }), ptrMat);
-    // lying on the strip at its inner edge, tip toward the scale, following the strip slope
-    ptr.position.set(side * (Q.hw + 0.0008), 0, Q.R + 0.0004);
-    ptr.rotation.y = side * 36 * DEG;
-    ptr.castShadow = true;
-    pg.add(ptr);
+    // index bar across the tick area of the scale (inner third of the strip), with a small arrow head inboard
+    const slope = Math.atan2(Q.R - Q.sR, Q.sx - Q.hw);
+    const f = 0.46;
+    const bar = new THREE.Mesh(geo.box(0.0105, 0.0011, 0.0009), ptrMat);
+    bar.position.set(side * (Q.hw + (Q.sx - Q.hw) * f), 0, Q.R - (Q.R - Q.sR) * f + 0.0006);
+    bar.rotation.y = side * slope;
+    const tri = new THREE.Shape([new THREE.Vector2(0, -0.0024), new THREE.Vector2(0, 0.0024), new THREE.Vector2(side * 0.0042, 0)]);
+    const head = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 0.0009, bevelEnabled: false }), ptrMat);
+    const f0 = 0.2;
+    head.position.set(side * (Q.hw + (Q.sx - Q.hw) * f0), 0, Q.R - (Q.R - Q.sR) * f0 + 0.0002);
+    head.rotation.y = side * slope;
+    bar.castShadow = head.castShadow = true;
+    pg.add(bar, head);
     pointers.push(pg);
   }
   let shownTrim = kit.sim.get(`C:${id}`);

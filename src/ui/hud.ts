@@ -48,8 +48,8 @@ export class Hud {
   private locked = false;
   private hoverKey = '';
   private tipShown = false;
-  private mx = 0;
-  private my = 0;
+  private mx = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
+  private my = typeof window !== 'undefined' ? window.innerHeight / 2 : 0;
   private fpsAcc = 0;
   private fpsN = 0;
   private flashT = 0;

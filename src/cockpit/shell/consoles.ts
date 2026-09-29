@@ -149,6 +149,28 @@ function buildConsole(app: App, side: Side): { root: THREE.Group; update(dt: num
   const ay = 0.78, az = -0.42;
   wall.at(geo.roundedBox(0.03, 0.05, 0.08, 0.006), K.bezel, wx(ay) - s * 0.012, ay, az);
   wall.at(geo.roundedBox(0.006, 0.012, 0.05, 0.003), K.chrome, wx(ay) - s * 0.029, ay + 0.012, az);
+  // headset on its hook on the post between the sliding and the fixed window
+  {
+    const hz = 0.105, hy = 1.16;
+    const hx = s * (W0(hy) - 0.004);
+    wall.at(geo.roundedBox(0.02, 0.012, 0.03, 0.004), K.darkMetal, hx - s * 0.01, hy, hz);
+    wall.at(geo.roundedBox(0.012, 0.03, 0.012, 0.004), K.darkMetal, hx - s * 0.024, hy + 0.012, hz);
+    // headband arc hanging from the hook, two ear cups, boom microphone
+    const band: THREE.Vector3[] = [];
+    for (let i = 0; i <= 16; i++) {
+      const a = Math.PI * (i / 16);
+      band.push(new THREE.Vector3(hx - s * (0.03 + 0.012 * Math.sin(a)), hy + 0.01 - 0.085 * (1 - Math.sin(a)) * 0 - 0.075 * (1 - Math.sin(a)), hz - 0.085 * Math.cos(a)));
+    }
+    wall.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(band), 32, 0.006, 8, false), M.gripBlack);
+    for (const e of [-1, 1]) {
+      const ec = new THREE.Vector3(hx - s * 0.035, hy - 0.08, hz + e * 0.085);
+      wall.add(new THREE.CylinderGeometry(0.036, 0.036, 0.03, 24).rotateX(Math.PI / 2).translate(ec.x, ec.y, ec.z), M.gripBlack);
+      wall.add(new THREE.CylinderGeometry(0.033, 0.033, 0.012, 24).rotateX(Math.PI / 2).translate(ec.x, ec.y, ec.z - e * 0.02), M.leather);
+    }
+    const boom: THREE.Vector3[] = [new THREE.Vector3(hx - s * 0.04, hy - 0.09, hz - 0.1), new THREE.Vector3(hx - s * 0.06, hy - 0.13, hz - 0.13), new THREE.Vector3(hx - s * 0.08, hy - 0.16, hz - 0.12)];
+    wall.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(boom), 12, 0.003, 6, false), M.gripBlack);
+    wall.add(new THREE.SphereGeometry(0.009, 12, 8).translate(boom[2].x, boom[2].y, boom[2].z), M.rubberBoot);
+  }
   root.add(wall.build(`shell:wall_items_${side}`));
 
   const b = bag.build(`shell:console_cabinet_${side}`);

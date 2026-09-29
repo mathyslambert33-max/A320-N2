@@ -41,7 +41,7 @@ export function buildMcdu(app: App, n: 1 | 2): THREE.Group {
   pl.key(`${P}_AIRPORT`, fx[0], -28.1, 14.2, 8, { depth: 4.5 });
   // blank key positions (no function)
   for (const [x, y] of [[fx[5], -5.5], [fx[1], -28.1]] as const) {
-    pl.addStatic(geo.roundedBox(m(14.2), m(8), 0.0045, 0.001), M.keyCap, x, y, 2.25);
+    pl.addStatic(geo.roundedBox(m(14.2), m(8), 0.0045, 0.001), M.bezel, x, y, 2.25);
   }
   pl.key(`${P}_PREV`, fx[0], -39.6, 14.2, 8, { depth: 4.5 });
   pl.key(`${P}_UP`, fx[1], -39.6, 14.2, 8, { depth: 4.5 });
@@ -149,7 +149,7 @@ export function buildEcp(app: App): THREE.Group {
 }
 
 /** Plain blank plate. */
-export function blank(app: App, name: string, w: number, h: number, screws?: Array<[number, number]>): THREE.Group {
-  const pl = new Plate(app, name, w, h, screws ? { screws } : {});
+export function blank(app: App, name: string, w: number, h: number, screws?: Array<[number, number]> | false): THREE.Group {
+  const pl = new Plate(app, name, w, h, screws === undefined ? {} : { screws });
   return pl.finish();
 }

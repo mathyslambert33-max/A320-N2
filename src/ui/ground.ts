@@ -703,7 +703,7 @@ export class GroundServices implements SimSystem {
       if (m.pos === m.target) continue;
       if (m.delay > 0) { m.delay -= dt; continue; }
       const step = m.rate * dt;
-      m.pos = Math.abs(m.target - m.pos) <= step ? m.target : m.pos + Math.sign(m.target - m.pos) * step;
+      m.pos = Math.abs(m.target - m.pos) <= step + 1e-4 ? m.target : m.pos + Math.sign(m.target - m.pos) * step;
       const x = Math.round(m.pos * 10000) / 10000;
       sim.set(v, x);
       m.written = x;

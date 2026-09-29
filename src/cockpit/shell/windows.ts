@@ -30,7 +30,7 @@ export function buildWindows(app: App): WindowParts {
   glass.both(ws, M.glass);
   const fx = windowPatch(WINDOWS.fixed, 0.01, WINDOWS.fixed.glass, 0.1);
   glass.both(fx, M.glassSide);
-  const gg = glass.build('shell:glass', { castShadow: false, receiveShadow: false });
+  const gg = glass.build('shell:glass', { castShadow: false, receiveShadow: false, dynamic: true });
   gg.traverse((o) => { o.renderOrder = 5; });
   root.add(gg);
 
@@ -52,16 +52,21 @@ export function buildWindows(app: App): WindowParts {
   const wipers = [buildWiper('CAPT'), buildWiper('FO')];
   for (const w of wipers) root.add(w.group);
 
-  // --- eye position indicator, sun visors
+  // --- eye position indicator, sun visors, external visual ice indicator
   root.add(buildEyeIndicator());
   root.add(buildVisors());
+  const ice = buildIceIndicator(app);
+  root.add(ice.root);
 
   const sim = app.sim;
+  let lastIce = -1;
   return {
     root,
     update() {
       wipers[0].set(sim.get('S:WIPER_CAPT_POS'));
       wipers[1].set(sim.get('S:WIPER_FO_POS'));
+      const v = sim.get('S:INTLT_ICE_IND') > 0.5 ? 1 : 0;
+      if (v !== lastIce) { lastIce = v; ice.lamp.emissiveIntensity = v * 3; }
     },
   };
 }
@@ -115,14 +120,14 @@ function buildSlidingWindow(app: App, side: 'CAPT' | 'FO'): THREE.Group {
   hb.add(grip, M.gripBlack);
   // release button on top of the grip + red indicator ring (visible only when unlocked)
   hb.at(geo.cylZ(0.0075, 0.0075, 0.008, 20), K.chrome, standoff, L / 2 + 0.004, 0, -Math.PI / 2, 0, 0);
-  const hg = hb.build(`shell:window_handle_${side}`);
+  const hg = hb.build(`shell:window_handle_${side}`, { dynamic: true });
   handle.add(hg);
   const ring = new THREE.Mesh(geo.cylZ(0.0086, 0.0086, 0.004, 20), M.red);
   ring.rotation.x = -Math.PI / 2;
   ring.position.set(standoff, L / 2 + 0.001, 0);
   handle.add(ring);
 
-  const sash = bag.build(`shell:sash_${side}`);
+  const sash = bag.build(`shell:sash_${side}`, { dynamic: true });
   const glassPane = new THREE.Mesh(windowPatch(w, -0.012, w.glass, 0.1), M.glassSide);
   glassPane.renderOrder = 5;
   glassPane.castShadow = false;
@@ -158,7 +163,7 @@ function buildWiper(side: 'CAPT' | 'FO'): { group: THREE.Group; set(pos: number)
   const k = side === 'CAPT' ? -1 : 1;
   const group = new THREE.Group();
   group.name = `shell:wiper_${side}`;
-  const yP = 1.108, xP = k * 0.8;
+  const yP = 1.074, xP = k * 0.8;
   const out = WS_NORMAL.clone().negate();
   const pivot = new THREE.Vector3(xP, yP, zWs(yP)).addScaledVector(out, WS.GLASS_DEPTH + WS.GLASS_T);
   group.position.copy(pivot);
@@ -184,7 +189,7 @@ function buildWiper(side: 'CAPT' | 'FO'): { group: THREE.Group; set(pos: number)
   bag.at(geo.box(0.5, 0.007, 0.012), M.wiper, 0.36, -0.012, 0.012);
   bag.at(geo.box(0.5, 0.003, 0.008), M.rubberBoot, 0.36, -0.012, 0.004);
   bag.at(geo.box(0.02, 0.02, 0.02), M.wiper, 0.36, -0.006, 0.022);
-  const mesh = bag.build(`shell:wiper_${side}`, { castShadow: true });
+  const mesh = bag.build(`shell:wiper_${side}`, { castShadow: true, dynamic: true });
   arm.add(mesh);
   let last = -1;
   return {
@@ -195,6 +200,39 @@ function buildWiper(side: 'CAPT' | 'FO'): { group: THREE.Group; set(pos: number)
       arm.rotation.z = clamp(pos, 0, 1) * 68 * DEG;
     },
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* External visual ice indicator                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Visual ice indicator outside the centre windshield post (a short probe the crew watch for ice accretion),
+ * with its lamp lit at night by the ICE IND & STBY COMPASS switch (S:INTLT_ICE_IND).
+ */
+function buildIceIndicator(app: App): { root: THREE.Group; lamp: THREE.MeshStandardMaterial } {
+  const M = shellMats();
+  const K = app.kit.mats;
+  const root = new THREE.Group();
+  root.name = 'shell:ice_indicator';
+  const y = 1.47;
+  const base = new THREE.Vector3(0, y, zWs(y)).addScaledVector(WS_NORMAL, -(WS.GLASS_DEPTH + WS.GLASS_T + 0.004));
+  const out = WS_NORMAL.clone().negate();
+  const m = new THREE.Matrix4().lookAt(new THREE.Vector3(), WS_NORMAL, new THREE.Vector3(0, 1, 0)).setPosition(base);
+  const bag = new MergeBag();
+  // mounting foot on the post, stem pointing forward, rounded probe tip, a darker leading strip
+  bag.add(geo.roundedBox(0.04, 0.03, 0.01, 0.004), M.wiper, m);
+  bag.add(geo.cylZ(0.006, 0.008, 0.06, 16), K.alu, m);
+  bag.add(new THREE.SphereGeometry(0.009, 16, 10).translate(0, 0, 0.062), K.alu, m);
+  bag.add(geo.box(0.004, 0.012, 0.05).clone().translate(0, 0.004, 0.03), K.darkMetal, m);
+  const lamp = M.lampLens.clone();
+  lamp.name = 'lens:ice_ind';
+  // lamp housing above the probe, shining down onto it
+  bag.add(geo.roundedBox(0.03, 0.016, 0.02, 0.005).clone().translate(0, 0.04, 0.012), M.wiper, m);
+  bag.add(geo.box(0.02, 0.003, 0.012).clone().translate(0, 0.0315, 0.012), lamp, m);
+  root.add(bag.build('shell:ice_ind', { dynamic: true }));
+  void out;
+  return { root, lamp };
 }
 
 /* ------------------------------------------------------------------ */
@@ -248,14 +286,14 @@ function buildVisors(): THREE.Group {
   const bag = new MergeBag();
   const tint = new MergeBag();
   const p = planAt(Y_WALL_TOP);
-  for (const zc of [-0.36]) {
+  for (const zc of [-0.49]) {
     const u = zc - p.zt;
-    const c = ceilMap(u, 0.16, new THREE.Vector3());
-    const du = ceilMap(u + 0.01, 0.16, new THREE.Vector3()).sub(c).normalize();
-    const dw = ceilMap(u, 0.17, new THREE.Vector3()).sub(c).normalize();
+    const c = ceilMap(u, 0.13, new THREE.Vector3());
+    const du = ceilMap(u + 0.01, 0.13, new THREE.Vector3()).sub(c).normalize();
+    const dw = ceilMap(u, 0.14, new THREE.Vector3()).sub(c).normalize();
     const nrm = new THREE.Vector3().crossVectors(du, dw).normalize();
     // nrm points into the cockpit (down/inboard) for the right side
-    const centre = c.clone().addScaledVector(nrm, 0.018);
+    const centre = c.clone().addScaledVector(nrm, 0.012);
     const m = new THREE.Matrix4().makeBasis(du, dw, nrm).setPosition(centre);
     const panel = new THREE.ShapeGeometry(roundedShape(0.34, 0.2, 0.03), 4);
     tint.add(panel, M.visor, m);
@@ -267,7 +305,7 @@ function buildVisors(): THREE.Group {
   const g = new THREE.Group();
   g.name = 'shell:visors';
   const a = bag.build('shell:visor_frames');
-  const t = tint.build('shell:visor_tint', { castShadow: false });
+  const t = tint.build('shell:visor_tint', { castShadow: false, dynamic: true });
   g.add(a, t);
   // mirror copies for the left side
   const left = g.clone();

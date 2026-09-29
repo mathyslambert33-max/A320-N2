@@ -57,12 +57,13 @@ export function buildSpeedBrake(app: App): THREE.Group {
   // lever
   const pivot = new THREE.Group();
   pl.add(pivot, sx, 0, PIV_Z / 0.001);
-  pivot.position.set(m(sx), 0, PIV_Z);
   const lift = new THREE.Group();
+  lift.name = 'SPDBRK_ARM'; // pulled up = ground spoilers armed
   pivot.add(lift);
   const arm = new THREE.Mesh(extrudeX([[-0.005, 0], [0.005, 0], [0.004, ARM - 0.012], [-0.004, ARM - 0.012]], -0.0032, 0.0032, 0.0006), PM.leverArm);
   lift.add(arm);
   const handle = new THREE.Group();
+  handle.name = 'SPDBRK_LEVER';
   handle.position.z = ARM;
   lift.add(handle);
   // handle: rounded black paddle, concave top
@@ -167,12 +168,14 @@ export function buildFlaps(app: App): THREE.Group {
   const arm = new THREE.Mesh(extrudeX([[-0.0055, 0], [0.0055, 0], [0.0045, ARM - 0.014], [-0.0045, ARM - 0.014]], -0.0035, 0.0035, 0.0006), PM.leverArm);
   lift.add(arm);
   const handle = new THREE.Group();
+  handle.name = 'FLAPS_LEVER';
   handle.position.z = ARM;
   lift.add(handle);
-  // handle: wide black block with rounded top and a finger lip underneath (the pilot lifts it out of the detent)
-  const hb = new THREE.Mesh(extrudeX([[-0.016, -0.012], [0.016, -0.012], [0.019, 0.004], [0.012, 0.013], [-0.012, 0.013], [-0.019, 0.004]], -0.0235, 0.0235, 0.0025), PM.gripBlack);
-  const neck = new THREE.Mesh(geo.roundedBox(0.012, 0.016, 0.014, 0.003), PM.gripBlack);
-  neck.position.z = -0.016;
+  // handle: wide rounded black block (≈ 46 × 34 mm seen from above) on a neck; the pilot lifts it out of each detent
+  const hb = new THREE.Mesh(geo.roundedBox(0.046, 0.034, 0.02, 0.0065), PM.gripBlack);
+  hb.position.z = 0.001;
+  const neck = new THREE.Mesh(geo.roundedBox(0.014, 0.017, 0.016, 0.004), PM.gripBlack);
+  neck.position.z = -0.014;
   handle.add(hb, neck);
   hb.castShadow = neck.castShadow = arm.castShadow = true;
   const id = 'FLAPS_LEVER';

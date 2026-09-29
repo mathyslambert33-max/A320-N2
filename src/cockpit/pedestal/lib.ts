@@ -30,8 +30,8 @@ export interface PedMats {
   knobWhite: THREE.MeshStandardMaterial;
   /** Thrust lever quadrant cover (dark grey, satin). */
   quadrant: THREE.MeshStandardMaterial;
-  /** Black glossy plastic (thrust lever grips, flap / speed brake handles, park brake handle). */
-  gripBlack: THREE.MeshPhysicalMaterial;
+  /** Black plastic (thrust lever grips, flap / speed brake handles, park brake handle) — kit knob material (batched). */
+  gripBlack: THREE.MeshStandardMaterial;
   /** Dark anodised metal (lever arms). */
   leverArm: THREE.MeshStandardMaterial;
   /** Pitch trim wheel rim (black, slightly rubbery). */
@@ -70,10 +70,10 @@ export function pedMats(): PedMats {
   _pm = {
     knobWhite: new THREE.MeshStandardMaterial({ color: 0xd3d6d4, roughness: 0.38, metalness: 0 }),
     quadrant: new THREE.MeshStandardMaterial({ color: 0x2a2e33, roughness: 0.62, metalness: 0.2, normalMap: nrm, normalScale: new THREE.Vector2(0.12, 0.12) }),
-    gripBlack: new THREE.MeshPhysicalMaterial({ color: 0x0d0e0f, roughness: 0.3, metalness: 0, clearcoat: 0.55, clearcoatRoughness: 0.35 }),
-    leverArm: new THREE.MeshStandardMaterial({ color: 0x1d2024, roughness: 0.45, metalness: 0.55 }),
-    trimWheel: new THREE.MeshStandardMaterial({ color: 0x121314, roughness: 0.5, metalness: 0.05, normalMap: knurl, normalScale: new THREE.Vector2(0.25, 0.25) }),
-    trimGrip: new THREE.MeshStandardMaterial({ color: 0xc9ccca, roughness: 0.55, metalness: 0 }),
+    gripBlack: M.knob,
+    leverArm: M.darkMetal,
+    trimWheel: M.knobKnurl,
+    trimGrip: M.white,
     athrRed: new THREE.MeshPhysicalMaterial({ color: 0xb3110d, roughness: 0.28, metalness: 0, clearcoat: 0.7, clearcoatRoughness: 0.2 }),
     gearRed: new THREE.MeshPhysicalMaterial({ color: 0xa8120e, roughness: 0.35, metalness: 0, clearcoat: 0.5 }),
     body: M.paint,
@@ -170,7 +170,8 @@ export class Plate {
   }
 
   key(id: string, x: number, y: number, w: number, h: number, o: { text?: string | string[]; small?: boolean; depth?: number; material?: THREE.Material } = {}): THREE.Group {
-    return this.p.key(id, m(x), m(y), m(w), m(h), { text: o.text, small: o.small, depth: o.depth !== undefined ? m(o.depth) : undefined, material: o.material });
+    // Airbus MCDU / ATC keys are near-black with white legends (the kit bezel material is shared → batched)
+    return this.p.key(id, m(x), m(y), m(w), m(h), { text: o.text, small: o.small, depth: o.depth !== undefined ? m(o.depth) : undefined, material: o.material ?? materials().bezel });
   }
 
   /** Round momentary pushbutton (black concave cap in a bezel ring). */
@@ -228,10 +229,11 @@ export class Plate {
   }
 
   /** Annunciator window with explicit legends (colours / layout differing from the catalog), no interaction. */
-  lamp(x: number, y: number, legs: Legend[], o: { w?: number; h?: number; bezel?: boolean; round?: boolean } = {}): THREE.Group {
+  lamp(x: number, y: number, legs: Legend[], o: { w?: number; h?: number; bezel?: boolean; round?: boolean; name?: string } = {}): THREE.Group {
     const M = materials();
     const w = m(o.w ?? 12), h = m(o.h ?? 9);
     const root = new THREE.Group();
+    root.name = o.name ?? (legs.length === 1 ? legs[0].light : 'lamp');
     root.position.set(m(x), m(y), 0);
     this.p.group.add(root);
     if (o.bezel !== false) this.p.addStatic(geo.rectRing(w + 0.0028, h + 0.0028, w, h, 0.0016, 0.0006), M.bezel, m(x), m(y), 0);
@@ -256,22 +258,33 @@ export class Plate {
 
   /** 7-segment window: a recessed dark window showing the UV rectangle [u0,u1]×[v0,v1] of display `id`. */
   window7(id: string, x: number, y: number, w: number, h: number, uv: [number, number, number, number] = [0, 1, 0, 1], bezel: { w?: number; h?: number } = {}): THREE.Mesh {
+    return this.windows7(id, [{ x, y, w, h, uv, bw: bezel.w, bh: bezel.h }]);
+  }
+
+  /** Several windows of one display canvas in a single mesh (one draw call) + one glass mesh. */
+  windows7(id: string, wins: Array<{ x: number; y: number; w: number; h: number; uv?: [number, number, number, number]; bw?: number; bh?: number }>): THREE.Mesh {
     const M = materials();
-    const bw = bezel.w ?? w + 5, bh = bezel.h ?? h + 4.5;
-    this.p.addStatic(geo.rectRing(m(bw), m(bh), m(w + 0.6), m(h + 0.6), 0.0016, 0.0009), M.bezel, m(x), m(y), 0);
-    this.p.addStatic(geo.box(m(w + 0.8), m(h + 0.8), 0.0004), M.black, m(x), m(y), 0.0002);
-    const g = new THREE.PlaneGeometry(m(w), m(h));
-    const a = g.attributes.uv as THREE.BufferAttribute;
-    const [u0, u1, v0, v1] = uv;
-    for (let i = 0; i < a.count; i++) a.setXY(i, u0 + (u1 - u0) * a.getX(i), v0 + (v1 - v0) * a.getY(i));
-    const disp = new THREE.Mesh(g, displayMat(id));
-    disp.position.set(m(x), m(y), 0.0005);
+    const planes: THREE.BufferGeometry[] = [];
+    const glass: THREE.BufferGeometry[] = [];
+    for (const wd of wins) {
+      const { x, y, w, h } = wd;
+      const bw = wd.bw ?? w + 5, bh = wd.bh ?? h + 4.5;
+      this.p.addStatic(geo.rectRing(m(bw), m(bh), m(w + 0.6), m(h + 0.6), 0.0016, 0.0009), M.bezel, m(x), m(y), 0);
+      this.p.addStatic(geo.box(m(w + 0.8), m(h + 0.8), 0.0004), M.black, m(x), m(y), 0.0002);
+      const g = new THREE.PlaneGeometry(m(w), m(h));
+      const a = g.attributes.uv as THREE.BufferAttribute;
+      const [u0, u1, v0, v1] = wd.uv ?? [0, 1, 0, 1];
+      for (let i = 0; i < a.count; i++) a.setXY(i, u0 + (u1 - u0) * a.getX(i), v0 + (v1 - v0) * a.getY(i));
+      g.translate(m(x), m(y), 0.0005);
+      planes.push(geo.normalise(g));
+      glass.push(geo.normalise(new THREE.PlaneGeometry(m(w + 0.8), m(h + 0.8)).translate(m(x), m(y), 0.0012)));
+    }
+    const disp = new THREE.Mesh(geo.mergeGeometries(planes)!, displayMat(id));
     disp.name = `display:${id}`;
     this.p.group.add(disp);
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(m(w + 0.8), m(h + 0.8)), M.screenGlass);
-    glass.position.set(m(x), m(y), 0.0012);
-    glass.renderOrder = 2;
-    this.p.group.add(glass);
+    const gm = new THREE.Mesh(geo.mergeGeometries(glass)!, M.screenGlass);
+    gm.renderOrder = 2;
+    this.p.group.add(gm);
     this.kit.interaction.addBlocker(disp);
     return disp;
   }
@@ -340,9 +353,36 @@ export function fixRotary(kit: Kit, root: THREE.Group, id: string, angles: numbe
       step(e.button === 2 ? -cw : cw);
     },
     onUp: () => { if (spring && Math.round(kit.sim.get(`C:${id}`)) !== (def.init ?? 0)) kit.setControl(id, def.init ?? 0, root, 'rotm'); },
-    onWheel: (s) => { if (!spring) step(s > 0 ? 1 : -1); },
-    describe: () => kit.describe(def),
+    onWheel: (s) => {
+      if (!spring) { step(s > 0 ? 1 : -1); return; }
+      // spring-loaded selector: each wheel notch holds it off-centre for PULSE s (e.g. RUD TRIM 1°/s → 0.25°)
+      const rest = def.init ?? 0;
+      const k = order.indexOf(rest);
+      const target = order[Math.max(0, Math.min(order.length - 1, k + (s > 0 ? 1 : -1)))];
+      if (pulseDir !== 0 && pulseTarget !== target) { pulseT = 0; }
+      pulseTarget = target;
+      pulseDir = s > 0 ? 1 : -1;
+      pulseT = Math.min(3, pulseT + PULSE * Math.abs(s));
+      if (Math.round(kit.sim.get(`C:${id}`)) !== target) kit.setControl(id, target, root, 'rotm');
+    },
+    describe: () => ({ ...kit.describe(def), ...(spring ? { fr: `${def.fr ?? def.name} — maintenir le clic (ressort) ou molette par impulsions` } : {}) }),
   };
+  const PULSE = 0.25;
+  let pulseT = 0, pulseDir = 0, pulseTarget = -1;
+  if (spring) {
+    kit.addInstance({
+      id: `${id}_PULSE`,
+      sync: (_sim, dt) => {
+        if (pulseDir === 0) return;
+        pulseT -= dt;
+        if (pulseT <= 0) {
+          pulseDir = 0;
+          pulseT = 0;
+          if (Math.round(kit.sim.get(`C:${id}`)) !== (def.init ?? 0)) kit.setControl(id, def.init ?? 0, root, 'rotm');
+        }
+      },
+    });
+  }
   const knob = root.children[0];
   kit.interaction.register(knob, handle);
 }
