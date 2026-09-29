@@ -80,7 +80,7 @@ export interface ShellMats {
   glassSide: THREE.MeshStandardMaterial;
   visor: THREE.MeshStandardMaterial;
   seatFabric: THREE.MeshStandardMaterial;
-  sheepskin: THREE.MeshStandardMaterial;
+  sheepskin: THREE.MeshPhysicalMaterial;
   leather: THREE.MeshStandardMaterial;
   webbing: THREE.MeshStandardMaterial;
   seatMetal: THREE.MeshStandardMaterial;
@@ -141,11 +141,30 @@ export function shellMats(): ShellMats {
   }
   const fabricN = heightToNormal(weave, N, 2.0);
   fabricN.repeat.set(5, 5);
-  // Sheepskin: long, clumpy fibres.
-  const woolH = valueNoise(N, 5, 16, 4);
-  const woolN = heightToNormal(woolH, N, 9.0);
-  const woolC = heightToColor(woolH, N, new THREE.Color(0x8e8474), new THREE.Color(0xe2d9c8), 0.5, 1.4);
-  woolN.repeat.set(4, 4); woolC.repeat.set(4, 4);
+  // Sheepskin: tufts (random soft clumps with a curl) over a low-frequency base.
+  const woolH = valueNoise(N, 2, 8, 4);
+  for (let i = 0; i < woolH.length; i++) woolH[i] *= 0.35;
+  {
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let t = 0; t < 2600; t++) {
+      const cx = rnd() * N, cy = rnd() * N, r = 2.5 + rnd() * 5.5, hgt = 0.5 + rnd() * 0.6, ang = rnd() * Math.PI;
+      const ca = Math.cos(ang), sa = Math.sin(ang);
+      const R = Math.ceil(r * 1.6);
+      for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+        // elongated clump (fibre direction ang)
+        const u = (dx * ca + dy * sa) / (r * 1.5), v = (-dx * sa + dy * ca) / r;
+        const d2 = u * u + v * v;
+        if (d2 > 1) continue;
+        const x = (Math.floor(cx) + dx + N) % N, y = (Math.floor(cy) + dy + N) % N;
+        const k = y * N + x;
+        woolH[k] = Math.max(woolH[k], woolH[k] * 0.3 + hgt * (1 - d2) * (1 - d2));
+      }
+    }
+  }
+  const woolN = heightToNormal(woolH, N, 5.0);
+  const woolC = heightToColor(woolH, N, new THREE.Color(0x9a8f7c), new THREE.Color(0xe9e1d0), 0.15, 1.05);
+  woolN.repeat.set(5, 5); woolC.repeat.set(5, 5);
   // Grille: perforations.
   const perfH = new Float32Array(N * N);
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
@@ -170,7 +189,14 @@ export function shellMats(): ShellMats {
     glassSide: glassMaterial(0.09, 0x000000),
     visor: std({ color: 0x0c1410, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.72, depthWrite: false, side: THREE.DoubleSide }, 'visor'),
     seatFabric: std({ color: 0x323946, roughness: 0.92, metalness: 0, normalMap: fabricN, normalScale: new THREE.Vector2(0.6, 0.6) }, 'seatFabric'),
-    sheepskin: std({ color: 0xffffff, map: woolC, roughness: 1.0, metalness: 0, normalMap: woolN, normalScale: new THREE.Vector2(1.2, 1.2) }, 'sheepskin'),
+    sheepskin: (() => {
+      const m = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff, map: woolC, roughness: 1.0, metalness: 0, normalMap: woolN, normalScale: new THREE.Vector2(1.0, 1.0),
+        sheen: 1.0, sheenColor: new THREE.Color(0xf4ecdc), sheenRoughness: 0.75,
+      });
+      m.name = 'sheepskin';
+      return m;
+    })(),
     leather: std({ color: 0x1d2024, roughness: 0.55, metalness: 0, normalMap: pebble, normalScale: new THREE.Vector2(0.25, 0.25) }, 'leather'),
     webbing: std({ color: 0x2e3440, roughness: 0.85, metalness: 0, normalMap: fabricN, normalScale: new THREE.Vector2(0.8, 0.8) }, 'webbing'),
     seatMetal: std({ color: 0x2c3035, roughness: 0.45, metalness: 0.55 }, 'seatMetal'),
