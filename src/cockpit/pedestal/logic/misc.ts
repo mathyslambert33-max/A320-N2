@@ -2,7 +2,19 @@
  * Small pedestal functions (DOM-free): RUD TRIM position window text, WX radar / PWS panel state, cockpit printer.
  */
 import type { Sim } from '../../../core/sim';
+import { registerControls } from '../../../core/catalog';
 import { printerPowered, rudTrimIndPowered, wxrPowered } from './power';
+
+let extrasRegistered = false;
+/** Pedestal controls that are not in the lead catalog (real hardware, no simulated function beyond events). */
+export function registerPedestalExtras(): void {
+  if (extrasRegistered) return;
+  extrasRegistered = true;
+  registerControls([
+    { id: 'AIDS_PRINT', panel: 'PED_LIGHTING_FO', kind: 'pbm', name: 'AIDS PRINT', init: 0, fr: 'Impression rapport AIDS' },
+    { id: 'DFDR_EVENT', panel: 'PED_LIGHTING_FO', kind: 'pbm', name: 'DFDR EVENT', init: 0, fr: "Marqueur d'événement enregistreur de vol" },
+  ]);
+}
 
 /**
  * RUD TRIM window text: direction letter + value with one decimal, e.g. "L 0.0", "R 1.2", "L20.0".
@@ -31,6 +43,7 @@ export class PedMisc {
   private testPrinted = 0;
 
   constructor(private readonly sim: Sim) {
+    registerPedestalExtras();
     sim.on('PRINTER_TEST:press', () => {
       if (printerPowered(this.sim) && this.testRemain <= 0) { this.testRemain = PRINTER_TEST_LENGTH; this.testPrinted = 0; }
     });

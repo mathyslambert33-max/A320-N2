@@ -125,7 +125,7 @@ export function shellMats(): ShellMats {
   const N = 256;
   // Linings: fine pebbled plastic.
   const pebble = heightToNormal(valueNoise(N, 3, 32, 1), N, 3.0);
-  pebble.repeat.set(6, 6);
+  pebble.repeat.set(9, 9);
   // Carpet: dense fibre noise + a faint loop pattern.
   const carpetH = valueNoise(N, 3, 64, 2);
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) carpetH[y * N + x] += 0.25 * Math.sin((x / N) * Math.PI * 2 * 48) * Math.sin((y / N) * Math.PI * 2 * 48);
@@ -160,8 +160,8 @@ export function shellMats(): ShellMats {
     return m;
   };
   _m = {
-    lining: std({ color: 0x9aa0a6, roughness: 0.78, metalness: 0, normalMap: pebble, normalScale: new THREE.Vector2(0.35, 0.35) }, 'lining'),
-    liningDark: std({ color: 0x4d5359, roughness: 0.8, metalness: 0, normalMap: pebble, normalScale: new THREE.Vector2(0.3, 0.3) }, 'liningDark'),
+    lining: std({ color: 0x9199a0, roughness: 0.72, metalness: 0, normalMap: pebble, normalScale: new THREE.Vector2(0.12, 0.12) }, 'lining'),
+    liningDark: std({ color: 0x4d5359, roughness: 0.75, metalness: 0, normalMap: pebble, normalScale: new THREE.Vector2(0.12, 0.12) }, 'liningDark'),
     trim: std({ color: 0x2b2f33, roughness: 0.55, metalness: 0.2 }, 'trim'),
     carpet: std({ color: 0xffffff, map: carpetC, roughness: 0.97, metalness: 0, normalMap: carpetN, normalScale: new THREE.Vector2(0.8, 0.8) }, 'carpet'),
     floorPlate: std({ color: 0x3b3f44, roughness: 0.5, metalness: 0.6 }, 'floorPlate'),

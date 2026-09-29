@@ -27,6 +27,8 @@ export type AcpN = (typeof ACPS)[number];
 
 /** Seconds after which an unanswered call stops flashing. */
 export const CALL_TIMEOUT = 60;
+/** Brightness of a reception knob light (kit legend scale, 1 = annunciator BRT). */
+export const RX_LIGHT = 0.35;
 
 /** Reception knobs pulled out at cold & dark (the previous crew left VHF 1 and the interphone selected). */
 const RX_DEFAULT_ON: RxCh[] = ['VHF1', 'INT'];
@@ -138,9 +140,12 @@ export class AcpModel {
       const ir = Math.round(s.get(`C:ACP${n}_INT_RAD`));
       s.set(`S:ACP${n}_INT_RAD`, u.powered ? (ir === 0 ? -1 : ir === 2 ? 1 : 0) : 0);
       for (const k of RX) {
-        const out = s.get(`C:ACP${n}_RX_${k}_ON`) > 0.5 || u.tx === k;
+        const knobOut = s.get(`C:ACP${n}_RX_${k}_ON`) > 0.5;
+        const out = knobOut || u.tx === k;
         const vol = Math.max(0, Math.min(1, s.get(`C:ACP${n}_RX_${k}`)));
         s.set(`S:ACP${n}_RX_${k}`, u.powered && out ? Math.round(vol * 1000) / 1000 : 0);
+        // integral light of the reception knob (lit when pulled out, ACP powered)
+        s.set(`L:ACP${n}_RX_${k}_LT`, u.powered && knobOut ? RX_LIGHT : 0);
       }
     }
   }
