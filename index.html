@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>A320 Cockpit — Cold &amp; Dark</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: #ddd; font-family: system-ui, sans-serif; }
+    #app { position: fixed; inset: 0; }
+    #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #07090c; z-index: 100; transition: opacity .6s; }
+    #loading h1 { font: 600 28px system-ui; letter-spacing: .08em; margin: 0; color: #e8edf2; }
+    #loading .bar { width: 320px; height: 4px; background: #1c232b; border-radius: 2px; overflow: hidden; }
+    #loading .bar > div { height: 100%; width: 0; background: #3fa9ff; transition: width .2s; }
+    #loading .step { font-size: 13px; color: #8a96a3; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="loading"><h1>A320 — COLD &amp; DARK</h1><div class="bar"><div id="loadbar"></div></div><div class="step" id="loadstep">Chargement…</div></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
