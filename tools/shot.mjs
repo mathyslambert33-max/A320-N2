@@ -16,6 +16,7 @@ const page = await browser.newPage({ viewport: { width: +w, height: +h } });
 const logs = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') logs.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}`));
+page.on('response', (r) => { if (r.status() >= 400) logs.push(`[http ${r.status()}] ${r.url()}`); });
 await page.goto(url, { waitUntil: 'load', timeout: 120000 });
 try { await page.waitForFunction('window.__ready === true', null, { timeout: 180000 }); } catch { logs.push('[shot] window.__ready never became true'); }
 await page.waitForTimeout(+wait);
