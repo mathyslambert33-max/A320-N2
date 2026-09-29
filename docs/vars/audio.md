@@ -53,6 +53,12 @@ wipers, window, gpu, tug, jetbridge, ambience, horns`. The console logs each ste
 | `ECP_EMER_CANC:press` | — | stops CRC |
 | `SIDESTICK_CAPT/FO_TAKEOVER:press` | — | stops the cavalry charge |
 | `EVAC_HORN_SHUTOFF:press` | — | silences the cockpit EVAC horn |
+| `fcs:dual_input`, `fcs:priority` `{side}` | — | synthetic voice "DUAL INPUT", "PRIORITY LEFT / RIGHT" (`callouts.ts`, browser speech synthesis, en-US) |
+| `gpws:aural` | `{msg, test?}` | synthetic voice of the GPWS message (e.g. the GPWS TEST sequence) |
+
+Also driven by state: `S:CALLS_MECH` (CALLS MECH held → the nose-gear-bay horn sounds continuously to call the
+ground mechanic) and `S:RCDR_CVR_TEST` (CVR TEST held → low-frequency 400 Hz test signal in both loudspeakers,
+scaled by the LOUDSPEAKER knobs `C:MAIN_LOUDSPEAKER_CAPT/FO`).
 
 ## Variables read
 Only read; fallbacks in brackets. **Assumed** = not in SIMVARS.md.
@@ -163,5 +169,6 @@ real time; measured (offline, M-series) ≈ 2-4 % in typical states and ≈ 10-1
   if someone defines it, otherwise assumes the door is open.
 - No `S:` variable for fuel pump running (inferred from pbs + AC), nor for the X FEED valve motion (inferred from the pb).
 - `S:APU_STARTING` is used when present for the DC starter; otherwise inferred.
-- GPWS/synthetic voice call-outs (RETARD, TOO LOW…) are not synthesised (out of scope for ground ops).
+- Voice call-outs use the browser speech synthesis (not routed through WebAudio: no spatialisation, no hull filtering).
+  Flight-phase call-outs (RETARD, TOO LOW…) are out of scope for ground ops.
 - Real FWC chime timbres/pitches are not published; values above are designed from descriptions and recordings memory.

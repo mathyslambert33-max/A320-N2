@@ -39,7 +39,12 @@ for (const f of files) {
 }
 
 const toRe = (p) => new RegExp('^' + p.split('*').map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$');
-const writePats = [...writes.keys()].map((p) => [p, toRe(p)]);
+// A template like `L:${p}_${r}` has almost no literal text: it would "match" every light and hide the ones nobody
+// drives. Such generic writes are listed separately and do not count as proof that a given name is written.
+const literal = (p) => p.slice(2).replace(/\*/g, '');
+const isGeneric = (p) => p.includes('*') && literal(p).replace(/_/g, '').length < 3;
+const writePats = [...writes.keys()].filter((p) => !isGeneric(p)).map((p) => [p, toRe(p)]);
+const genericWrites = [...writes].filter(([p]) => isGeneric(p));
 const isWritten = (name) => writePats.some(([p, r]) => r.test(name) || toRe(name).test(p));
 
 // Catalog: extract declared lights & control ids by importing the compiled catalog through tsx is heavy;
@@ -64,8 +69,13 @@ for (const [name, fs_] of [...reads].sort()) {
 }
 if (!n) console.log('  (none)');
 
+if (genericWrites.length) {
+  console.log('\n=== Generic writes (too little literal text to check statically: verify with the whole-game test) ===');
+  for (const [p, fs_] of genericWrites) console.log(`  ${p.padEnd(36)} ${[...fs_].join(', ')}`);
+}
+
 if (catalogLights.length) {
-  console.log('\n=== Catalog LIGHTS never written (L:) ===');
+  console.log('\n=== Catalog LIGHTS never written (L:) — generic writes above not counted ===');
   const missing = catalogLights.filter((l) => !isWritten(`L:${l}`));
   console.log(missing.length ? '  ' + missing.join(' ') : '  (none)');
   console.log(`  ${catalogLights.length - missing.length}/${catalogLights.length} lights driven`);

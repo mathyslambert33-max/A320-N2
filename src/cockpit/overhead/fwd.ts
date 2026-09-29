@@ -7,8 +7,6 @@
 import * as THREE from 'three';
 import type { App } from '../../app';
 import { getControl, type Legend } from '../../core/catalog';
-import { geo } from '../kit';
-import { materials } from '../kit/materials';
 import { Plate, MM, addPaddle, fireFrame, fireGuardLook } from './lib';
 
 /* ------------------------------------------------------------------ */
@@ -505,10 +503,8 @@ const lower: Build = (app, h) => {
   p.sw('SIGNS_NO_SMOKING', 65, -42, { label: 'NO SMOKING', labelDy: 17.5, pos: [['ON', 0, 12.5], ['OFF', 0, -12.5]] });
   p.vtext('AUTO', 75.5, -42, 1.6);
   p.line([[84, -26], [84, -62]], 0.6);
-  // EMER EXIT LT: unlit window beside the switch
-  const M = materials();
-  p.addStatic(geo.rectRing(0.0158, 0.0158, 0.0122, 0.0122, 0.0028), M.bezel, 97, -42);
-  p.addStatic(geo.roundedBox(0.012, 0.012, 0.004, 0.0008), M.cap, 97, -42, 0.8);
+  // EMER EXIT LT: amber OFF light beside the selector
+  p.ann('SIGNS_EMER_EXIT_LT_OFF', 97, -42, 12.2, 12.2);
   p.label('EMER EXIT LT', 112, -24.5, 1.9);
   p.sw('SIGNS_EMER_EXIT_LT', 124, -42, { pos: [['ON', 10, 9, 'left'], ['ARM', 10, 0, 'left'], ['OFF', 10, -9, 'left']] });
   return p.finish();

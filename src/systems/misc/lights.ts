@@ -20,7 +20,8 @@
  *  - SEAT BELTS ON; NO SMOKING ON, or AUTO with the landing gear down-locked; EXIT signs with NO SMOKING
  *    ON/AUTO (gear down) or EMER EXIT LT ON; all signs on when the cabin altitude exceeds 11 300 ft.
  *    Each seat belt / no smoking sign change → `cabin:chime {type:'lo'}`.
- *  - EMER EXIT LT ON: emergency lights on; ARM: they come on automatically when DC SHED ESS BUS is lost.
+ *  - EMER EXIT LT ON: emergency lights on; ARM: they come on automatically when DC SHED ESS BUS is lost;
+ *    OFF: amber OFF light next to the selector (L:SIGNS_EMER_EXIT_LT_OFF).
  */
 import { approach } from '../../core/sim';
 import { type Ctx, clamp } from './common';
@@ -140,5 +141,7 @@ export class LightsModel {
     sim.set('S:SIGNS_EXIT', exit);
     sim.set('S:SIGNS_EMER_LT', emerLt);
     sim.set('S:SIGNS_EMER_EXIT_LT_OFF', emerSel !== 1);
+    const annPwr = sim.has('S:ANN_POWER') ? sim.getB('S:ANN_POWER') : p.ann;
+    sim.set('L:SIGNS_EMER_EXIT_LT_OFF', annPwr && emerSel === 2);
   }
 }

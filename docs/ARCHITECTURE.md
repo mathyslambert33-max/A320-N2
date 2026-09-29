@@ -14,14 +14,19 @@ FlyByWire A32NX docs `docs.flybywiresim.com`, smartcockpit, pilot forums) rather
 
 ## Run
 ```
-source env.sh            # puts the project-local Node on PATH (Node is not installed system-wide)
+source env.sh            # macOS workstation only: puts the project-local Node on PATH
 npm run dev              # http://127.0.0.1:5173  (game)   — a shared dev server is usually already running
 npm run typecheck        # tsc --noEmit over the whole repo
-npm test                 # vitest (headless system tests)
-node tools/shot.mjs "/dev.html?..." shots/x.png 1600 1000 3000   # headless screenshot (system Chrome)
+npm test                 # vitest (headless system tests, incl. the whole-game SOP test)
+node tools/shot.mjs "/dev.html?..." shots/x.png 1600 1000 3000   # headless screenshot
 node tools/check-vars.mjs  # variables read but never written, lights never driven, etc.
 ```
-Note: the repo path contains spaces — always quote paths.
+- macOS workstation: the repo path contains spaces — always quote paths. `shot.mjs` uses the system Chrome (Metal).
+- Linux / cloud containers: Node is on PATH; `shot.mjs` uses the preinstalled Playwright Chromium with SwiftShader
+  software WebGL (60–120 s per shot: serialise with `flock /tmp/shot.lock node tools/shot.mjs …` when several agents
+  work at once). Blender is the `bpy` module (`pip install "bpy==4.5.*"`), run through `tools/blender.sh` as below.
+- Static build (also used for the playable artifact): `npx vite build --base ./` — never hard-code absolute asset
+  URLs; load files from `public/` with `import.meta.env.BASE_URL + 'models/…'`.
 
 ## Layout of the code (each agent owns ONE folder; never edit files outside your folder)
 
@@ -125,13 +130,15 @@ See `src/cockpit/kit/README.md`.
    from other modules or the lead.
 
 ## 3D assets from Blender (organic / curved parts only)
-Panels and controls are generated in code with the kit (exact sizes, interactive). Blender 5.2.2 (installed in
-`.tools/blender`) is for organic or curved parts that code primitives render poorly: seats, sidesticks, tillers,
+Panels and controls are generated in code with the kit (exact sizes, interactive). Blender (5.2.2 app in
+`.tools/blender` on the macOS workstation, or the `bpy` 4.5 LTS Python module in Linux containers — scripts must run
+on both: read args after `--`, start with `bpy.ops.wm.read_factory_settings(use_empty=True)`, Blender 4.5 APIs only) is for
+organic or curved parts that code primitives render poorly: seats, sidesticks, tillers,
 windshield/window frames, curved linings. Rules:
 - Reproducible: a Python script per asset in `tools/blender/<module>/<name>.py`, run with
   `tools/blender.sh tools/blender/<module>/<name>.py -- public/models/<module>/<name>.glb`; commit the script and the .glb.
 - Units metres; model in Blender Z-up (the glTF exporter converts to Y-up); origin at a meaningful pivot
   (e.g. sidestick pivot) so the part can be placed/animated in Three.js; apply modifiers on export (`export_apply=True`).
-- Load with `GLTFLoader` (`three/examples/jsm/loaders/GLTFLoader.js`) from `/models/...`; replace materials by kit
+- Load with `GLTFLoader` (`three/examples/jsm/loaders/GLTFLoader.js`) from `import.meta.env.BASE_URL + 'models/...'`; replace materials by kit
   materials by name where possible; join meshes per material to keep draw calls low; moving parts as separate named nodes.
 - Check the result in the harness with `tools/shot.mjs` (never trust the script without looking at the PNG).

@@ -241,3 +241,29 @@ export class CabinAir extends Voice {
     this.srcs.push(this.core.noise('pink', this.g));
   }
 }
+
+/**
+ * CVR TEST: while the pb is held (CVR running, parking brake set, on ground — computed by sys-misc as
+ * S:RCDR_CVR_TEST) a low-frequency test signal sounds through both flight-deck loudspeakers, at the
+ * level of the LOUDSPEAKER knobs (silent when both are at OFF).
+ */
+export class CvrTestVoice extends Voice {
+  private g: GainNode;
+  private lvl = 0;
+  constructor(core: AudioCore) {
+    super(core, 'cvr-test');
+    this.g = core.gain(0, this.bus(core.filter('bandpass', 420, 1.2), core.alertBus));
+  }
+
+  update(dt: number, v: VarReader): void {
+    const ls = Math.max(v.get('C:MAIN_LOUDSPEAKER_CAPT'), v.get('C:MAIN_LOUDSPEAKER_FO'));
+    const target = v.get('S:RCDR_CVR_TEST') > 0 ? clamp(ls, 0, 1) : 0;
+    this.lvl = lag2(this.lvl, target, dt, 0.03, 0.06);
+    if (!this.run(this.lvl, dt)) return;
+    this.set(this.g.gain, db(-16) * this.lvl, 0.02);
+  }
+
+  protected build(): void {
+    this.srcs.push(this.core.osc([1, 0.18, 0.06], 400, this.g));
+  }
+}

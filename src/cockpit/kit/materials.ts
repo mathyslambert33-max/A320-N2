@@ -161,7 +161,8 @@ export function materials(): Materials {
     keyCap: std({ color: 0x3a3e42, roughness: 0.6, metalness: 0 }),
     guardRed: new THREE.MeshPhysicalMaterial({ color: 0xb01010, roughness: 0.35, metalness: 0, clearcoat: 0.4 }),
     guardBlack: std({ color: 0x141516, roughness: 0.4, metalness: 0 }),
-    guardClear: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.08, metalness: 0, transmission: 0, transparent: true, opacity: 0.22, depthWrite: false }),
+    // Clear polycarbonate guard: nearly invisible body, glossy clear-coat highlights on the edges (was milky at 0.22 white).
+    guardClear: new THREE.MeshPhysicalMaterial({ color: 0xdfe8ec, roughness: 0.04, metalness: 0, transmission: 0, transparent: true, opacity: 0.11, clearcoat: 1, clearcoatRoughness: 0.03, specularIntensity: 1, depthWrite: false }),
     screenGlass: new THREE.MeshPhysicalMaterial({ color: 0x000000, roughness: 0.12, metalness: 0, transparent: true, opacity: 0.08, clearcoat: 1, clearcoatRoughness: 0.15, depthWrite: false }),
     black: std({ color: 0x050505, roughness: 0.8, metalness: 0 }),
     lcdBlack: std({ color: 0x0a0c0b, roughness: 0.3, metalness: 0 }),

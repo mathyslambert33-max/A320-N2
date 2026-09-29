@@ -5,11 +5,13 @@
  *    to satisfy browser autoplay policies, or when `app.services.audio.resume()` is called.
  *  - `app.services.audio = { resume(), context, setMuted(b), muted, selfTest(filter?), stopSelfTest(),
  *    engine, debug() }`.
+ *  - Voice callouts (DUAL INPUT, PRIORITY LEFT/RIGHT, GPWS messages) use the browser speech synthesis.
  *  - No-op in a HeadlessApp / node (no window or no AudioContext).
  */
 import type { App } from '../app';
 import type { Settings } from '../core/settings';
 import { AudioEngine } from './engine';
+import { Callouts } from './callouts';
 import type { FwcPayload } from './alerts';
 import type { SfxPayload } from './oneshots';
 import { audioSelfTest, stopAudioSelfTest } from './selftest';
@@ -115,6 +117,13 @@ export default function install(app: App): void {
     else if (userStarted) void ctx.resume().catch(() => undefined);
   });
 
+  // Synthetic voice callouts (browser speech synthesis; only after the first user gesture).
+  const callouts = new Callouts(() => app.settings.get());
+  const speak = (text: string, interrupt = false) => { if (userStarted) callouts.say(text, interrupt); };
+  sim.on('fcs:dual_input', () => speak('DUAL INPUT'));
+  sim.on('fcs:priority', (p?: { side?: string }) => speak(`PRIORITY ${p?.side === 'RIGHT' ? 'RIGHT' : 'LEFT'}`, true));
+  sim.on('gpws:aural', (p?: { msg?: string }) => { if (p?.msg) speak(p.msg); });
+
   // Sim events.
   sim.on('sfx', (p: SfxPayload) => { if (engine && ctx?.state === 'running') engine.sfx(p); });
   sim.on('fwc:sound', (p: FwcPayload | string) => { if (engine) engine.fwc(p); });
@@ -146,6 +155,7 @@ export default function install(app: App): void {
     setMuted(b: boolean) {
       muted = b;
       engine?.setMuted(b);
+      callouts.setMuted(b);
     },
     get muted() {
       return muted;

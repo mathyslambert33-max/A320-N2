@@ -266,6 +266,7 @@ panel('OVHD_SIGNS');
 sw('SIGNS_SEAT_BELTS', 'SEAT BELTS', ['ON', 'OFF'], 1, 'Consigne ceintures');
 sw('SIGNS_NO_SMOKING', 'NO SMOKING', ['ON', 'AUTO', 'OFF'], 2, 'Consigne non-fumeur');
 sw('SIGNS_EMER_EXIT_LT', 'EMER EXIT LT', ['ON', 'ARM', 'OFF'], 2, 'Éclairage de secours');
+ann('SIGNS_EMER_EXIT_LT_OFF', 'EMER EXIT LT OFF light', 'OFF', 'A', 'Voyant éclairage de secours coupé (sélecteur sur OFF)');
 
 panel('OVHD_INTLT');
 pot('INTLT_OVHD_INTEG', 'OVHD INTEG LT', 0, 'Éclairage intégré du panneau supérieur');

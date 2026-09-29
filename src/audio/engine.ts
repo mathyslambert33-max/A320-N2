@@ -11,7 +11,7 @@ import { AudioCore, POS, Voice, db, hold, type Leak, type VarReader, type Vec3 }
 import { clamp, lerp, openings, volumeToGain } from './mappings';
 import { OneShots, type SfxPayload } from './oneshots';
 import { AirportAmbience } from './voices/ambience';
-import { AvionicsFans, CabinAir, ElecHum, PackAir } from './voices/cockpit';
+import { AvionicsFans, CabinAir, CvrTestVoice, ElecHum, PackAir } from './voices/cockpit';
 import { ApuVoice, EngineVoice } from './voices/engines';
 import { DieselVoice, HornVoice, JetbridgeVoice, gpuDrive, tugDrive } from './voices/ground';
 import { ElecPumpVoice, FuelPumpsVoice, PtuVoice, ValveMotorVoice } from './voices/hyd';
@@ -87,6 +87,8 @@ export class AudioEngine implements VarReader {
       new DieselVoice(c, 'gpu', POS.gpu, 4, -30, -20, gpuDrive),
       new JetbridgeVoice(c),
       new HornVoice(c, 'nose-horn', POS.noseGear, true, -16, [311, 392], 0.5, (v) => {
+        // CALLS MECH held: the same nose-gear-bay horn calls the ground mechanic.
+        if (v.get('S:CALLS_MECH') > 0) return 'cont';
         if (v.has('G:AC_ON_GROUND') && v.get('G:AC_ON_GROUND') <= 0) return 'off';
         if (v.get('S:FIRE_APU_DET') > 0) return 'cont';
         if (v.get('S:ADIRS_ON_BAT') > 0 && v.get('S:ELEC_AC_POWERED') <= 0) return 'inter';
@@ -100,6 +102,7 @@ export class AudioEngine implements VarReader {
       new WiperVoice(c, 'FO', s),
       new WindowSlideVoice(c, 'CAPT'),
       new WindowSlideVoice(c, 'FO'),
+      new CvrTestVoice(c),
       this.ambience,
     );
     this.applySettings(settings);
