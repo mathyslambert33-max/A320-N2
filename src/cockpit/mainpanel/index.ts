@@ -18,5 +18,8 @@ export default function install(app: App): void {
   root.add(buildGlareshield(app));
   root.add(buildCompass(app));
   app.cockpit.add(root);
-  app.services.mainpanel = { root };
+  // Draw-call reduction: batched caps/knobs/levers/legends + merged statics (kit.optimise). `&mpBatch=0` disables it.
+  const q = typeof location !== 'undefined' ? new URLSearchParams(location.search) : null;
+  const batch = q?.get('mpBatch') === '0' ? null : app.kit.optimise(root, 'MAIN');
+  app.services.mainpanel = { root, batch };
 }

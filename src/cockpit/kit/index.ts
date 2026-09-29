@@ -13,6 +13,7 @@ import { getControl, registerControls, type ControlDef, type LightColor } from '
 import { PanelBuilder, type PanelOptions } from './panel';
 import { materials, LIGHT_COLORS, ZONE_UNIFORMS, BACKLIGHT_COLOR, type LightZone, type Materials } from './materials';
 import { atlas } from './atlas';
+import { optimisePanels, type OptimiseOptions, type OptimiseStats } from './optimise';
 import type { Handle, HandleInfo, Interaction } from './interaction';
 
 export { PanelBuilder } from './panel';
@@ -20,6 +21,8 @@ export type { PanelOptions, PbOptions, SwitchOptions, KnobOptions, KeyOptions, S
 export type { Handle, HandleInfo, InteractEvent } from './interaction';
 export type { LightZone } from './materials';
 export * as geo from './geo';
+export { PROXY_LAYER } from './optimise';
+export type { OptimiseOptions, OptimiseStats } from './optimise';
 
 export interface ControlInstance {
   id: string;
@@ -66,6 +69,7 @@ export class Kit {
   private instances: ControlInstance[] = [];
   private legends: LegendInstance[] = [];
   private keyMats = new Map<LightZone, THREE.MeshStandardMaterial>();
+  private afterUpdate: Array<() => void> = [];
   /** Emissive intensity of a lit legend (BRT). */
   legendIntensity = 3.2;
 
@@ -304,6 +308,32 @@ export class Kit {
     this.interaction.register(o.hit ?? obj, handle);
   }
 
+  /** Materials of every lit legend created so far (one per legend instance). */
+  legendMaterialSet(): Set<THREE.Material> {
+    return new Set(this.legends.map((l) => l.mat));
+  }
+
+  /** Shared printed key/cap label materials (one per lighting zone). */
+  keyLabelMaterials(): THREE.Material[] {
+    return [...this.keyMats.values()];
+  }
+
+  /** Run `fn` at the end of every `update` (after controls are animated and legends lit). */
+  onAfterUpdate(fn: () => void): () => void {
+    this.afterUpdate.push(fn);
+    return () => { const i = this.afterUpdate.indexOf(fn); if (i >= 0) this.afterUpdate.splice(i, 1); };
+  }
+
+  /**
+   * Draw-call reduction for a finished, placed panel assembly: batches the moving control parts and the lit
+   * legends, merges the statics (see optimise.ts). Kept in sync automatically after every kit update.
+   */
+  optimise(root: THREE.Object3D, name: string, o: OptimiseOptions = {}): OptimiseStats {
+    const r = optimisePanels(this, root, name, o);
+    this.onAfterUpdate(r.update);
+    return r.stats;
+  }
+
   update(dt: number, _t: number): void {
     const sim = this.sim;
     for (const inst of this.instances) inst.sync(sim, dt);
@@ -322,5 +352,6 @@ export class Kit {
     ZONE_UNIFORMS.glare.value = sim.get('S:INTLT_INTEG_GLARE');
     for (const [zone, m] of this.keyMats) m.emissiveIntensity = ZONE_UNIFORMS[zone].value * 1.4;
     atlas().flush();
+    for (const f of this.afterUpdate) f();
   }
 }

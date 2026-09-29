@@ -67,6 +67,8 @@ export class Interaction {
   constructor(public app: App) {
     this.raycaster.far = 3.5;
     this.raycaster.near = 0.02;
+    // Controls replaced by batches (kit.optimise) keep their original meshes on PROXY_LAYER (30) for picking.
+    this.raycaster.layers.enable(30);
     if (typeof window === 'undefined') return;
     const el = app.renderer.domElement;
     el.addEventListener('pointerdown', (ev) => this.onPointerDown(ev));

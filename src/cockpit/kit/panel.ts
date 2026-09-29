@@ -817,6 +817,7 @@ export class PanelBuilder {
     face.receiveShadow = true;
     face.name = `${this.opts.name}:face`;
     const slab = new THREE.Mesh(geo.panelSlab(this.w, this.h, t, r), base);
+    slab.name = `${this.opts.name}:slab`;
     slab.receiveShadow = true;
     slab.castShadow = true;
     this.group.add(slab, face);
