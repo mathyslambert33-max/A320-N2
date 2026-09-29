@@ -19,6 +19,7 @@ import { annPower, rmpPowered } from './power';
 export type RadioId = 'VHF1' | 'VHF2' | 'VHF3' | 'HF1' | 'HF2';
 export const RADIOS: RadioId[] = ['VHF1', 'VHF2', 'VHF3', 'HF1', 'HF2'];
 export type NavSel = 'VOR' | 'ILS' | 'MLS' | 'ADF';
+export const NAV_SELS: NavSel[] = ['VOR', 'ILS', 'MLS', 'ADF'];
 export const DATA = -1;
 
 /** 8.33 kHz channel names within each 100 kHz block (25 kHz channels are 00, 25, 50, 75). */
@@ -159,24 +160,34 @@ export class RmpModel {
     const s = this.sim;
     const ann = annPower(s);
     for (const u of this.units) {
-      u.powered = rmpPowered(s, u.n);
-      u.on = s.get(`C:RMP${u.n}_ON`) < 0.5;
+      const n = u.n;
+      u.powered = rmpPowered(s, n);
+      u.on = s.get(`C:RMP${n}_ON`) < 0.5;
       const ok = this.usable(u);
       const lit = ok && ann;
-      const p = `RMP${u.n}`;
-      for (const r of RADIOS) s.set(`L:${p}_${r}`, lit && !u.nav && u.sel === r ? 1 : 0);
-      s.set(`L:${p}_AM`, lit && !u.nav && isHf(u.sel) && u.am ? 1 : 0);
-      s.set(`L:${p}_NAV`, lit && u.nav ? 1 : 0);
-      for (const k of ['VOR', 'ILS', 'MLS', 'ADF'] as NavSel[]) s.set(`L:${p}_${k}`, lit && u.nav && u.navSel === k ? 1 : 0);
-      s.set(`L:${p}_BFO`, lit && u.nav && u.navSel === 'ADF' && u.bfo ? 1 : 0);
-      s.set(`L:${p}_SEL`, lit && this.selLight(u) ? 1 : 0);
-      s.set(`S:${p}_POWERED`, u.powered ? 1 : 0);
-      s.set(`S:${p}_ON`, ok ? 1 : 0);
-      s.set(`S:${p}_SEL_RADIO`, RADIOS.indexOf(u.sel) + 1);
-      s.set(`S:${p}_NAV`, ok && u.nav ? 1 : 0);
+      const com = lit && !u.nav;
+      s.set(`L:RMP${n}_VHF1`, com && u.sel === 'VHF1' ? 1 : 0);
+      s.set(`L:RMP${n}_VHF2`, com && u.sel === 'VHF2' ? 1 : 0);
+      s.set(`L:RMP${n}_VHF3`, com && u.sel === 'VHF3' ? 1 : 0);
+      s.set(`L:RMP${n}_HF1`, com && u.sel === 'HF1' ? 1 : 0);
+      s.set(`L:RMP${n}_HF2`, com && u.sel === 'HF2' ? 1 : 0);
+      s.set(`L:RMP${n}_AM`, com && isHf(u.sel) && u.am ? 1 : 0);
+      s.set(`L:RMP${n}_NAV`, lit && u.nav ? 1 : 0);
+      const nav = lit && u.nav;
+      s.set(`L:RMP${n}_VOR`, nav && u.navSel === 'VOR' ? 1 : 0);
+      s.set(`L:RMP${n}_ILS`, nav && u.navSel === 'ILS' ? 1 : 0);
+      s.set(`L:RMP${n}_MLS`, nav && u.navSel === 'MLS' ? 1 : 0);
+      s.set(`L:RMP${n}_ADF`, nav && u.navSel === 'ADF' ? 1 : 0);
+      s.set(`L:RMP${n}_BFO`, nav && u.navSel === 'ADF' && u.bfo ? 1 : 0);
+      s.set(`L:RMP${n}_SEL`, lit && this.selLight(u) ? 1 : 0);
+      s.set(`S:RMP${n}_POWERED`, u.powered ? 1 : 0);
+      s.set(`S:RMP${n}_ON`, ok ? 1 : 0);
+      s.set(`S:RMP${n}_SEL_RADIO`, RADIOS.indexOf(u.sel) + 1);
+      s.set(`S:RMP${n}_NAV`, ok && u.nav ? 1 : 0);
+      s.set(`S:RMP${n}_NAV_SEL`, ok && u.nav ? NAV_SELS.indexOf(u.navSel) + 1 : 0);
       const mhz = (k: number) => (k === DATA ? -1 : k / 1000);
-      s.set(`S:${p}_ACT`, ok ? mhz(this.act[u.sel]) : 0);
-      s.set(`S:${p}_STBY`, ok ? mhz(u.stby[u.sel]) : 0);
+      s.set(`S:RMP${n}_ACT`, ok ? mhz(this.act[u.sel]) : 0);
+      s.set(`S:RMP${n}_STBY`, ok ? mhz(u.stby[u.sel]) : 0);
     }
     for (const r of RADIOS) {
       const a = this.act[r];

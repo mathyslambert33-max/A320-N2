@@ -31,11 +31,36 @@ export function xpdrPowered(sim: Sim, sys: 1 | 2): boolean {
   return bus(sim, 'S:ELEC_AC2_BUS');
 }
 
+/** ATC/TCAS control panel (keyboard + code window): powered by either transponder supply. */
+export function atcPanelPowered(sim: Sim): boolean {
+  return xpdrPowered(sim, 1) || xpdrPowered(sim, 2);
+}
+
+/** TCAS computer: AC BUS 1. */
+export function tcasPowered(sim: Sim): boolean {
+  return bus(sim, 'S:ELEC_AC1_BUS');
+}
+
 /** Weather radar transceiver 1 AC BUS 1, 2 AC BUS 2. PWS computer follows the radar supplies. */
 export function wxrPowered(sim: Sim, sys: 0 | 1 | 2): boolean {
   if (sys === 1) return bus(sim, 'S:ELEC_AC1_BUS');
   if (sys === 2) return bus(sim, 'S:ELEC_AC2_BUS');
   return bus(sim, 'S:ELEC_AC1_BUS') || bus(sim, 'S:ELEC_AC2_BUS');
+}
+
+/**
+ * RUD TRIM position indicator: fed by the FACs (FAC 1 AC ESS + DC ESS SHED, FAC 2 AC 2 + DC 2).
+ * Lit when at least one FAC supply is available.
+ */
+export function rudTrimIndPowered(sim: Sim): boolean {
+  const fac1 = (bus(sim, 'S:ELEC_AC_ESS_BUS') || bus(sim, 'S:ELEC_AC_ESS_SHED')) && (bus(sim, 'S:ELEC_DC_ESS_SHED') || bus(sim, 'S:ELEC_DC_ESS_BUS'));
+  const fac2 = bus(sim, 'S:ELEC_AC2_BUS') && bus(sim, 'S:ELEC_DC2_BUS');
+  return fac1 || fac2;
+}
+
+/** Cockpit printer: AC BUS 1. */
+export function printerPowered(sim: Sim): boolean {
+  return bus(sim, 'S:ELEC_AC1_BUS');
 }
 
 /** 1 Hz flashing phase (on for the first half second) from sim time. */
