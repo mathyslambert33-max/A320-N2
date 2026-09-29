@@ -86,7 +86,10 @@ export default async function install(app: App): Promise<void> {
   }
 
   const buildings = wno.has('buildings') ? null : buildBuildings(stand, new Set());
-  if (buildings) airport.add(buildings.group);
+  if (buildings) {
+    airport.add(buildings.group);
+    markCaster(buildings.group);
+  }
   env.onChange((st) => buildings?.setNight(st.artificial * 1.2));
 
   const exterior = new THREE.Group();

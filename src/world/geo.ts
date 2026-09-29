@@ -8,16 +8,18 @@
  *  - three.js world: the aircraft eye station sits at the world origin (float precision near the camera),
  *    X = east, Y = up (ground at Y = 0), Z = south.
  */
+import { COCKPIT } from '../cockpit/layout';
+import { SCENARIO } from '../core/scenario';
+
 export const DATA_ORIGIN = { lat: 44.83095, lon: -0.70438 } as const;
 export const KX = 111320 * Math.cos((DATA_ORIGIN.lat * Math.PI) / 180);
 export const KY = 111132;
 
 /**
- * Cockpit floor height above the apron (m). The Airbus AC document gives passenger door 1 sill heights of about
- * 3.4 m for the A320 and the cabin floor continues flat into the flight deck, so the cockpit floor is ~3.40 m
- * above the ground (layout.ts says 2.55 m, which would put the door sill 0.85 m too low for the jet bridge).
+ * Cockpit floor height above the apron (m), from layout.ts (3.40 m: the Airbus AC document gives door 1 sill heights
+ * of 3.42-3.73 m and the cabin floor continues flat into the flight deck).
  */
-export const FLOOR_HEIGHT = 3.4;
+export const FLOOR_HEIGHT: number = COCKPIT.floorHeightAboveGround;
 
 /** Attitude on the ground (deg): + nose up / + right wing down. Same values as the ADIRS ground attitude (sys-misc). */
 export const GROUND_PITCH = 0.4;
@@ -71,7 +73,7 @@ function standOnPier(along: number, dist: number, heading: number, name: string)
   };
 }
 
-export const STAND_14: StandDef = standOnPier(0, 12, 298, '14');
+export const STAND_14: StandDef = standOnPier(0, 12, SCENARIO.stand.headingTrue, '14');
 
 /** Unit vector (east, north) of a true bearing. */
 export function bearingVec(deg: number): [number, number] {

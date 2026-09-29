@@ -121,8 +121,10 @@ const bucket = (): Bucket => ({ pos: [], uv: [], col: [], nrm: [] });
 export function buildBuildings(stand: StandDef, skipNames: Set<string>): BuildingsBuild {
   const group = new THREE.Group();
   group.name = 'world-buildings';
-  const walls = new Map<FacadeKind, Bucket>();
-  const roofs = { flat: bucket(), tile: bucket() };
+  // near buildings (< NEAR_R m from the stand) also cast into the cockpit key-light shadow map
+  const NEAR_R = 400;
+  const walls = new Map<string, Bucket>();
+  const roofs = new Map<string, Bucket>();
   const named = new Map<string, { rings: number[][]; height: number }>();
   const r = rng(4242);
   const recs = decodePolys(LFBD.BUILDINGS, 2, 0.1);
@@ -143,30 +145,38 @@ export function buildBuildings(stand: StandDef, skipNames: Set<string>): Buildin
           : cls === BCls.Parking ? 'parking' : h > 7 ? 'office' : 'house';
     const tint = 0.86 + r() * 0.2;
     const col = new THREE.Color(tint, tint * (0.98 + r() * 0.04), tint * (0.95 + r() * 0.07));
-    let bw = walls.get(kind);
-    if (!bw) walls.set(kind, (bw = bucket()));
+    const near = Math.hypot(rings[0][0], rings[0][1]) < NEAR_R ? 'n' : 'f';
+    const wk = kind + ':' + near;
+    let bw = walls.get(wk);
+    if (!bw) walls.set(wk, (bw = bucket()));
     const [tw, th] = FACADE_TILE[kind];
     const u0 = Math.floor(r() * 7) * tw; // random offset: not all facades start with the same bay
     for (const ring of rings) extrudeWalls(bw, ring, h, tw, th, col, u0);
-    const roof = kind === 'house' ? roofs.tile : roofs.flat;
+    const rk = (kind === 'house' ? 'tile' : 'flat') + ':' + near;
+    let roof = roofs.get(rk);
+    if (!roof) roofs.set(rk, (roof = bucket()));
     const rc = kind === 'house' ? new THREE.Color().setHSL(0.03 + r() * 0.02, 0.45, 0.30 + r() * 0.1) : new THREE.Color(0.5 + r() * 0.1, 0.5 + r() * 0.1, 0.5 + r() * 0.1);
     roofTop(roof, rings, h, rc);
   });
 
-  const mats: THREE.Material[] = [];
   const emissiveMats: THREE.MeshStandardMaterial[] = [];
-  for (const [kind, b] of walls) {
-    const { map, emissive } = facadeTextures(kind);
-    const glass = kind === 'glass';
-    const m = patchWorldMaterial(new THREE.MeshStandardMaterial({
-      map, vertexColors: true, roughness: glass ? 0.18 : 0.85, metalness: glass ? 0.35 : 0.0,
-      emissive: new THREE.Color(1, 1, 1), emissiveMap: emissive, emissiveIntensity: 0,
-    }));
-    emissiveMats.push(m);
-    mats.push(m);
+  const wallMats = new Map<FacadeKind, THREE.MeshStandardMaterial>();
+  for (const [wk, b] of walls) {
+    const [kind, near] = wk.split(':') as [FacadeKind, string];
+    let m = wallMats.get(kind);
+    if (!m) {
+      const { map, emissive } = facadeTextures(kind);
+      const glass = kind === 'glass';
+      m = patchWorldMaterial(new THREE.MeshStandardMaterial({
+        map, vertexColors: true, roughness: glass ? 0.18 : 0.85, metalness: glass ? 0.35 : 0.0,
+        emissive: new THREE.Color(1, 1, 1), emissiveMap: emissive, emissiveIntensity: 0,
+      }));
+      wallMats.set(kind, m);
+      emissiveMats.push(m);
+    }
     const mesh = new THREE.Mesh(toGeometry(b), m);
-    mesh.name = `buildings-${kind}`;
-    mesh.castShadow = false;
+    mesh.name = `buildings-${kind}-${near}`;
+    mesh.castShadow = near === 'n';
     mesh.receiveShadow = true;
     group.add(mesh);
   }
@@ -180,10 +190,15 @@ export function buildBuildings(stand: StandDef, skipNames: Set<string>): Buildin
     for (let y = 0; y < h; y += 8) { g.fillStyle = 'rgba(60,25,15,0.35)'; g.fillRect(0, y, w, 2); }
     for (let x = 0; x < w; x += 6) { g.fillStyle = 'rgba(255,220,200,0.08)'; g.fillRect(x, 0, 2, h); }
   });
-  for (const [key, b, tex] of [['flat', roofs.flat, roofTex], ['tile', roofs.tile, tileTex]] as [string, Bucket, THREE.Texture][]) {
-    const m = patchWorldMaterial(new THREE.MeshStandardMaterial({ map: tex, vertexColors: true, roughness: 0.9 }));
-    const mesh = new THREE.Mesh(toGeometry(b), m);
-    mesh.name = `roofs-${key}`;
+  const roofMats = {
+    flat: patchWorldMaterial(new THREE.MeshStandardMaterial({ map: roofTex, vertexColors: true, roughness: 0.9 })),
+    tile: patchWorldMaterial(new THREE.MeshStandardMaterial({ map: tileTex, vertexColors: true, roughness: 0.9 })),
+  };
+  for (const [rk, b] of roofs) {
+    const [key, near] = rk.split(':') as ['flat' | 'tile', string];
+    const mesh = new THREE.Mesh(toGeometry(b), roofMats[key]);
+    mesh.name = `roofs-${key}-${near}`;
+    mesh.castShadow = near === 'n';
     mesh.receiveShadow = true;
     group.add(mesh);
   }
