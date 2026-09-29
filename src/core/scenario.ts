@@ -32,11 +32,15 @@ export const SCENARIO = {
     distanceNm: 319,
     blockTime: '0055',
   },
-  /** Stand at LFBD Hall A contact stand, nose-in toward the terminal. */
+  /**
+   * Stand at LFBD Hall A contact stand, nose-in toward the terminal. A true heading of 298° is nose-in only on the
+   * south-east facade of the real Hall A pier (OpenStreetMap footprint, facade normal 135°): the eye station is 12 m
+   * in front of that facade at gate B9 (see src/world/geo.ts STAND_14, which writes the same position).
+   */
   stand: {
     name: 'Stand 14 (Hall A)',
-    lat: 44.83095,
-    lon: -0.70438,
+    lat: 44.83028,
+    lon: -0.70425,
     /** True heading of the aircraft at the stand (deg). */
     headingTrue: 298,
     elevationFt: 162,

@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { setControl } from '../../src/core/headless';
+import { SCENARIO } from '../../src/core/scenario';
 import { settings } from '../../src/core/settings';
 import { alignDuration } from '../../src/systems/misc/adirs';
 import { irs, power, runUntil, sample, setup } from './helpers';
@@ -55,8 +56,8 @@ describe('ADIRS alignment', () => {
     }
     expect(sim.get('L:ADIRS_IR1_ALIGN')).toBe(0);
     expect(sim.get('L:ADIRS_IR2_ALIGN')).toBe(0);
-    expect(sim.get('S:ADIRS_LAT')).toBeCloseTo(44.83095, 3);
-    expect(sim.get('S:ADIRS_LON')).toBeCloseTo(-0.70438, 3);
+    expect(sim.get('S:ADIRS_LAT')).toBeCloseTo(SCENARIO.stand.lat, 3);
+    expect(sim.get('S:ADIRS_LON')).toBeCloseTo(SCENARIO.stand.lon, 3);
     expect(sim.get('S:ADIRS_HDG_TRUE')).toBeCloseTo(298, 1);
     expect(sim.get('S:ADIRS_HDG_MAG')).toBeCloseTo(298 - sim.get('G:AC_MAGVAR'), 1);
     expect(sim.get('S:ADIRS_GS')).toBe(0);

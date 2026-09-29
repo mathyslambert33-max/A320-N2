@@ -151,6 +151,10 @@ export const COCKPIT = {
   noseTipZ: -2.9,
   noseGearZ: 2.2,
   mainGearZ: 14.84,
-  floorHeightAboveGround: 2.55,
+  /**
+   * Cockpit floor above the apron (m), level with the cabin floor: A320 door 1 sill is 3.42–3.73 m depending on
+   * weight (Airbus AC doc), eye ≈ floor + eyeY ≈ 4.7 m (published cockpit eye height ≈ 4.55 m, 14 ft 11 in).
+   */
+  floorHeightAboveGround: 3.4,
 };
 
