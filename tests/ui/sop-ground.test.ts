@@ -74,7 +74,9 @@ describe('SOP with ground services (ui module + all logic modules)', () => {
     runUntil(sim, () => g.status().loadsheetFinal, 400, 'final loadsheet');
     expect(g.door('PAX_L1', false).ok).toBe(true);
     runUntil(sim, () => sim.get('G:DOOR_PAX_L1') === 0, 30, 'L1 closed');
-    expect(g.jetbridge(false).ok).toBe(true);
+    const jb = g.jetbridge(false);
+    expect(jb.msg).toBe('');
+    expect(jb.ok).toBe(true);
     runUntil(sim, () => sim.get('G:DOOR_CARGO_FWD') === 0 && sim.get('G:DOOR_CARGO_AFT') === 0, 200, 'cargo doors closed');
     runUntil(sim, () => sim.get('G:JETBRIDGE') === 0, 120, 'bridge retracted');
     runUntil(sim, () => sim.getB('G:CABIN_READY'), 120, 'cabin ready');
